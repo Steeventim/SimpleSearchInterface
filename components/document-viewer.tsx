@@ -14,8 +14,10 @@ import {
   Search,
   Download,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DocumentViewerProps {
   documentPath: string;
@@ -52,27 +54,37 @@ export function DocumentViewer({
       setError(null);
 
       try {
+        console.log("Récupération des pages du document:", documentPath);
         // Appeler l'API pour obtenir les informations sur les pages du document
-        const response = await fetch(
-          `/api/document/pages?path=${encodeURIComponent(
-            documentPath
-          )}&searchTerm=${encodeURIComponent(searchTerm || "")}`
-        );
+        const pagesUrl = `/api/document/pages?path=${encodeURIComponent(
+          documentPath
+        )}&searchTerm=${encodeURIComponent(searchTerm || "")}`;
+        console.log("URL de l'API pages:", pagesUrl);
+
+        const response = await fetch(pagesUrl);
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData.error || "Erreur lors du chargement du document"
           );
         }
 
         const data = await response.json();
-        setPages(data.pages || []);
-        setTotalPages(data.totalPages || 0);
+        console.log("Pages récupérées:", data);
 
-        // Définir la page actuelle sur la première page
-        if (data.pages && data.pages.length > 0) {
-          setCurrentPage(0);
+        if (data.pages && Array.isArray(data.pages)) {
+          setPages(data.pages);
+          setTotalPages(data.totalPages || 0);
+
+          // Définir la page actuelle sur la première page
+          if (data.pages.length > 0) {
+            setCurrentPage(0);
+          }
+        } else {
+          throw new Error(
+            "Format de données invalide pour les pages du document"
+          );
         }
       } catch (error: any) {
         console.error("Erreur:", error);
@@ -155,9 +167,10 @@ export function DocumentViewer({
               <span className="ml-2">Chargement du document...</span>
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center h-full py-12 text-destructive">
-              {error}
-            </div>
+            <Alert variant="destructive" className="my-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : (
             <>
               <div className="flex justify-between items-center mb-4">

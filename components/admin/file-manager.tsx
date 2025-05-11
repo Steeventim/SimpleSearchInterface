@@ -12,10 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Search, Download, RefreshCw } from "lucide-react";
+import { Trash2, Search, Download, RefreshCw, FolderPlus } from "lucide-react";
 import { DirectorySelector } from "@/components/directory-selector";
 import { FilePreview } from "@/components/file-preview";
-// import { removeFileFromIndex } from "@/lib/file-indexer"
+import { removeFileFromIndex } from "@/lib/file-indexer";
+import { Alert, AlertDescription, AlertCircle } from "@/components/ui/alert";
 
 interface FileInfo {
   name: string;
@@ -32,20 +33,37 @@ export function FileManager() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newDirectory, setNewDirectory] = useState("");
+  const [showNewDirInput, setShowNewDirInput] = useState(false);
 
   // Charger les fichiers
   const loadFiles = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/files?directory=${encodeURIComponent(directory)}`
-      );
-      if (!response.ok)
-        throw new Error("Erreur lors du chargement des fichiers");
+      // Construire l'URL avec le répertoire encodé correctement
+      const encodedDirectory = encodeURIComponent(directory || "");
+      const response = await fetch(`/api/files?directory=${encodedDirectory}`);
+
+      if (!response.ok) {
+        throw new Error(
+          `Erreur ${response.status}: Impossible de charger les fichiers`
+        );
+      }
+
       const data = await response.json();
-      setFiles(data.files);
+
+      if (Array.isArray(data.files)) {
+        console.log(`Fichiers chargés: ${data.files.length}`, data.files);
+        setFiles(data.files);
+      } else {
+        console.error("Format de réponse inattendu:", data);
+        setFiles([]);
+      }
     } catch (error) {
-      console.error("Erreur:", error);
+      console.error("Erreur lors du chargement des fichiers:", error);
+      setError("Impossible de charger les fichiers. Veuillez réessayer.");
+      setFiles([]);
     } finally {
       setLoading(false);
     }
@@ -77,7 +95,7 @@ export function FileManager() {
         throw new Error("Erreur lors de la suppression du fichier");
 
       // Supprimer également de l'index Elasticsearch
-      // await removeFileFromIndex(fileName)
+      await removeFileFromIndex(fileName);
 
       // Recharger la liste des fichiers
       loadFiles();
@@ -108,6 +126,42 @@ export function FileManager() {
     }
   };
 
+  const createDirectory = async () => {
+    if (!newDirectory.trim()) return;
+
+    try {
+      // Construire le chemin complet
+      const fullPath = directory
+        ? `${directory}/${newDirectory}`
+        : newDirectory;
+
+      // Appeler l'API pour créer le répertoire
+      const response = await fetch(`/api/files/directory`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path: fullPath }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Erreur ${response.status}: Impossible de créer le répertoire`
+        );
+      }
+
+      // Réinitialiser l'état
+      setNewDirectory("");
+      setShowNewDirInput(false);
+
+      // Recharger les fichiers
+      loadFiles();
+    } catch (error) {
+      console.error("Erreur lors de la création du répertoire:", error);
+      setError("Impossible de créer le répertoire. Veuillez réessayer.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -118,6 +172,41 @@ export function FileManager() {
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1">
               <DirectorySelector value={directory} onChange={setDirectory} />
+            </div>
+            <div className="flex-1 relative">
+              {showNewDirInput ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nom du nouveau répertoire"
+                    value={newDirectory}
+                    onChange={(e) => setNewDirectory(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={createDirectory}
+                    disabled={!newDirectory.trim()}
+                  >
+                    Créer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewDirInput(false);
+                      setNewDirectory("");
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNewDirInput(true)}
+                >
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Nouveau répertoire
+                </Button>
+              )}
             </div>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
@@ -135,6 +224,13 @@ export function FileManager() {
               Actualiser
             </Button>
           </div>
+
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-8">

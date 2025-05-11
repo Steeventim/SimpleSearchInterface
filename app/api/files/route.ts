@@ -1,36 +1,121 @@
 import { NextResponse } from "next/server";
-import { readdir, stat, unlink, readFile } from "fs/promises";
+import fs from "fs";
 import path from "path";
+import util from "util";
+
+// Promisify fs functions
+const readdir = util.promisify(fs.readdir);
+const stat = util.promisify(fs.stat);
+const unlink = util.promisify(fs.unlink);
+const mkdir = util.promisify(fs.mkdir);
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    let filePath = searchParams.get("path");
+    const directory = searchParams.get("directory") || "";
 
-    if (!filePath) {
+    // Construire le chemin complet du répertoire
+    const baseDir = process.env.UPLOAD_DIRECTORY || "./uploads";
+    const dirPath = path.join(baseDir, directory.replace(/\.\./g, "")); // Empêcher la traversée de répertoire
+
+    console.log(`Tentative de lecture du répertoire: ${dirPath}`);
+
+    // Vérifier si le répertoire existe
+    try {
+      const dirStat = await stat(dirPath);
+      if (!dirStat.isDirectory()) {
+        console.error(`Le chemin n'est pas un répertoire: ${dirPath}`);
+        return NextResponse.json(
+          {
+            error: `Le chemin n'est pas un répertoire: ${dirPath}`,
+            files: [],
+          },
+          { status: 400 }
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Erreur lors de la vérification du répertoire: ${dirPath}`,
+        error
+      );
+      // Si le répertoire n'existe pas, créer le répertoire
+      try {
+        await mkdir(dirPath, { recursive: true });
+        console.log(`Répertoire créé: ${dirPath}`);
+      } catch (mkdirError) {
+        console.error(
+          `Impossible de créer le répertoire: ${dirPath}`,
+          mkdirError
+        );
+        return NextResponse.json(
+          {
+            error: `Impossible d'accéder ou de créer le répertoire: ${dirPath}`,
+            files: [],
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Lire le contenu du répertoire
+    let files;
+    try {
+      files = await readdir(dirPath);
+      console.log(`Fichiers trouvés dans ${dirPath}: ${files.length}`);
+    } catch (readError) {
+      console.error(
+        `Erreur lors de la lecture du répertoire: ${dirPath}`,
+        readError
+      );
       return NextResponse.json(
-        { error: "Le chemin du fichier contient des caractères non valides." },
-        { status: 400 }
+        {
+          error: `Erreur lors de la lecture du répertoire: ${dirPath}`,
+          files: [],
+        },
+        { status: 500 }
       );
     }
 
-    console.log("Original file path:", filePath);
-    filePath = normalizeFilePath(filePath);
-    console.log("Normalized file path:", filePath);
+    // Récupérer les informations de chaque fichier
+    const fileInfos = await Promise.all(
+      files.map(async (fileName) => {
+        try {
+          const filePath = path.join(dirPath, fileName);
+          const fileStat = await stat(filePath);
 
-    const fileBuffer = await readFile(filePath);
-    const mimeType = getFileType(filePath);
+          return {
+            name: fileName,
+            path: filePath,
+            size: fileStat.size,
+            lastModified: fileStat.mtime.toISOString(),
+            isDirectory: fileStat.isDirectory(),
+            type: getFileType(fileName),
+          };
+        } catch (fileError) {
+          console.error(
+            `Erreur lors de la récupération des informations du fichier ${fileName}:`,
+            fileError
+          );
+          return null;
+        }
+      })
+    );
 
-    return new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": mimeType,
-        "Content-Disposition": `inline; filename="${path.basename(filePath)}"`,
-      },
-    });
+    // Filtrer les entrées nulles et les répertoires
+    const filesList = fileInfos.filter(
+      (file) => file !== null && !file.isDirectory
+    );
+
+    return NextResponse.json({ files: filesList });
   } catch (error) {
-    console.error("Erreur lors de la lecture du fichier:", error);
+    console.error("Files API error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de la lecture du fichier" },
+      {
+        error: `Erreur lors de la récupération des fichiers: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        files: [],
+      },
       { status: 500 }
     );
   }
@@ -42,27 +127,24 @@ export async function DELETE(request: Request) {
     const filePath = searchParams.get("path");
 
     if (!filePath) {
-      console.error("File path not specified");
       return NextResponse.json(
         { error: "Chemin de fichier non spécifié" },
         { status: 400 }
       );
     }
 
+    // Vérifier que le chemin est dans le répertoire d'upload
     const baseDir = process.env.UPLOAD_DIRECTORY || "./uploads";
     const normalizedPath = path.normalize(filePath);
 
-    console.log("Requested file path:", filePath);
-    console.log("Normalized file path:", normalizedPath);
-
     if (!normalizedPath.startsWith(baseDir)) {
-      console.error("Unauthorized file path:", normalizedPath);
       return NextResponse.json(
         { error: "Chemin de fichier non autorisé" },
         { status: 403 }
       );
     }
 
+    // Supprimer le fichier
     await unlink(normalizedPath);
 
     return NextResponse.json({ success: true });
@@ -99,12 +181,4 @@ function getFileType(fileName: string): string {
   };
 
   return mimeTypes[extension] || "application/octet-stream";
-}
-
-function normalizeFilePath(filePath: string): string {
-  return filePath
-    .normalize("NFKD") // Normalise les caractères Unicode
-    .replace(/[’‘]/g, "'") // Remplace les apostrophes typographiques par des apostrophes simples
-    .replace(/[\u2018\u2019\u201C\u201D]/g, "'") // Remplace d'autres guillemets Unicode
-    .replace(/[^a-zA-Z0-9_\-./]/g, ""); // Supprime les caractères non valides
 }

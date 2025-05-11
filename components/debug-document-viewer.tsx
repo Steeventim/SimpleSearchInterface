@@ -12,7 +12,6 @@ import {
   Download,
   ExternalLink,
   AlertCircle,
-  FileText,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -41,7 +40,6 @@ export function DebugDocumentViewer({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fileInfo, setFileInfo] = useState<any>(null);
-  const [uploadDirInfo, setUploadDirInfo] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("document");
   const [documentPages, setDocumentPages] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -59,11 +57,6 @@ export function DebugDocumentViewer({
       setError(null);
 
       try {
-        // Vérifier le répertoire d'upload
-        const uploadDirResponse = await fetch("/api/check-upload-dir");
-        const uploadDirData = await uploadDirResponse.json();
-        setUploadDirInfo(uploadDirData);
-
         // Vérifier le fichier
         const response = await fetch(fileUrl, { method: "HEAD" });
 
@@ -216,10 +209,9 @@ export function DebugDocumentViewer({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
+          <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto">
             <TabsTrigger value="document">Document</TabsTrigger>
             <TabsTrigger value="pages">Pages</TabsTrigger>
-            <TabsTrigger value="debug">Débogage</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-hidden flex flex-col mt-4">
@@ -331,82 +323,6 @@ export function DebugDocumentViewer({
                 </TabsContent>
               </>
             )}
-
-            <TabsContent value="debug" className="flex-1 overflow-auto p-4">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">
-                    Informations sur le répertoire d'upload
-                  </h3>
-                  {uploadDirInfo ? (
-                    <div className="bg-muted p-4 rounded-md overflow-auto max-h-[200px]">
-                      <pre className="text-xs">
-                        {JSON.stringify(uploadDirInfo, null, 2)}
-                      </pre>
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground">
-                      Aucune information disponible
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-2">
-                    Variables d'environnement
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="font-medium">UPLOAD_DIRECTORY</div>
-                    <div>
-                      {process.env.NEXT_PUBLIC_UPLOAD_DIRECTORY || "Non défini"}
-                    </div>
-
-                    <div className="font-medium">ELASTICSEARCH_URL</div>
-                    <div>
-                      {process.env.NEXT_PUBLIC_ELASTICSEARCH_URL ||
-                        "Non défini"}
-                    </div>
-
-                    <div className="font-medium">ELASTICSEARCH_INDEX</div>
-                    <div>
-                      {process.env.NEXT_PUBLIC_ELASTICSEARCH_INDEX ||
-                        "Non défini"}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-2">
-                    Chemin du document
-                  </h3>
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="break-all text-sm">{documentPath}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-2">
-                    Actions de débogage
-                  </h3>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleRefresh}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Actualiser
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <a
-                        href="/api/check-upload-dir"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Vérifier le répertoire
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
           </div>
         </Tabs>
       </DialogContent>

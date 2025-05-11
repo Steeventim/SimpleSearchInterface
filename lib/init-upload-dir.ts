@@ -5,6 +5,7 @@ export function initUploadDirectory() {
   try {
     // Récupérer le répertoire d'upload depuis les variables d'environnement
     const uploadDir = process.env.UPLOAD_DIRECTORY || "./uploads";
+    console.log(`Initialisation du répertoire d'upload: ${uploadDir}`);
 
     // Créer le répertoire s'il n'existe pas
     if (!fs.existsSync(uploadDir)) {
@@ -20,6 +21,16 @@ export function initUploadDirectory() {
       console.log(
         `Le répertoire d'upload ${uploadDir} est accessible en écriture`
       );
+
+      // Créer des sous-répertoires courants s'ils n'existent pas
+      const commonDirs = ["documents", "images", "videos", "others"];
+      for (const dir of commonDirs) {
+        const subDir = path.join(uploadDir, dir);
+        if (!fs.existsSync(subDir)) {
+          console.log(`Création du sous-répertoire: ${subDir}`);
+          fs.mkdirSync(subDir, { recursive: true });
+        }
+      }
     } catch (error) {
       console.error(
         `Le répertoire d'upload ${uploadDir} n'est pas accessible en écriture:`,

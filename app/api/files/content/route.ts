@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { readFile, access, constants, stat } from "fs/promises";
-import path from "path";
 import fs from "fs";
+import path from "path";
+import util from "util";
+
+// Promisify fs functions
+const readFile = util.promisify(fs.readFile);
+const access = util.promisify(fs.access);
+const stat = util.promisify(fs.stat);
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +51,7 @@ export async function GET(request: Request) {
 
     // Vérifier si le fichier est accessible en lecture
     try {
-      await access(normalizedPath, constants.R_OK);
+      await access(normalizedPath, fs.constants.R_OK);
     } catch (error) {
       console.error(
         `Le fichier n'est pas accessible en lecture: ${normalizedPath}`,

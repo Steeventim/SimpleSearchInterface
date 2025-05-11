@@ -8,16 +8,14 @@ import type {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Eye } from "lucide-react";
+import { Calendar, FileText } from "lucide-react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { DebugDocumentViewer } from "@/components/debug-document-viewer";
+import { FallbackDocumentViewer } from "@/components/fallback-document-viewer";
 
 interface SearchResultsProps {
   results: SearchResult[];
@@ -161,11 +159,17 @@ export function SearchResults({
                       {result.title}
                     </a>
                   </CardTitle>
-                  <CardDescription className="text-xs truncate">
-                    {result.fileName
-                      ? `Fichier: ${result.fileName}`
-                      : result.url}
-                  </CardDescription>
+
+                  {/* Nom du fichier mis en évidence et transformé en lien */}
+                  {result.fileName && (
+                    <div
+                      className="mt-2 text-lg font-medium text-primary hover:underline cursor-pointer flex items-center"
+                      onClick={() => handleViewDocument(result)}
+                    >
+                      <FileText className="h-5 w-5 mr-2" />
+                      {result.fileName}
+                    </div>
+                  )}
                 </CardHeader>
 
                 <CardContent>
@@ -203,16 +207,13 @@ export function SearchResults({
                   )}
                 </CardContent>
 
+                {/* Suppression du bouton Visualiser dans le CardFooter */}
                 <CardFooter>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() => handleViewDocument(result)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Visualiser
-                  </Button>
+                  <div className="text-xs text-muted-foreground ml-auto">
+                    {result.filePath
+                      ? "Cliquez sur le nom du fichier pour le visualiser"
+                      : ""}
+                  </div>
                 </CardFooter>
               </div>
             </div>
@@ -221,7 +222,7 @@ export function SearchResults({
       </div>
 
       {selectedDocument && (
-        <DebugDocumentViewer
+        <FallbackDocumentViewer
           documentPath={selectedDocument.path}
           documentTitle={selectedDocument.title}
           searchTerm={searchQuery}
