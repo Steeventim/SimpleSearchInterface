@@ -11,8 +11,8 @@
   },
   {
     "term": "ministre",
-    "count": 2,
-    "lastSearched": "2025-05-11T14:21:55.288Z"
+    "count": 4,
+    "lastSearched": "2025-06-18T01:43:54.654Z"
   },
   {
     "term": "aviation",
@@ -43,5 +43,15 @@
     "term": "audits",
     "count": 2,
     "lastSearched": "2025-05-11T14:12:20.476Z"
+  },
+  {
+    "term": "cemac",
+    "count": 11,
+    "lastSearched": "2025-06-18T02:43:07.328Z"
+  },
+  {
+    "term": "cemac recherche",
+    "count": 1,
+    "lastSearched": "2025-06-18T02:34:59.777Z"
   }
 ]

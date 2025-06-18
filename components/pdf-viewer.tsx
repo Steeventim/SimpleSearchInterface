@@ -16,11 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import * as pdfjs from "pdfjs-dist";
-
-// Initialiser PDF.js
-const pdfjsVersion = "3.11.174"; // Assurez-vous que cette version correspond à celle que vous avez installée
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+import { initializePdfjs } from "@/lib/pdf-utils";
 
 interface PdfViewerProps {
   documentUrl: string;
@@ -58,6 +54,12 @@ export function PdfViewer({
       setError(null);
 
       try {
+        // Initialiser PDF.js de manière dynamique
+        const pdfjs = await initializePdfjs();
+        if (!pdfjs) {
+          throw new Error("Impossible d'initialiser PDF.js");
+        }
+
         // Charger le document PDF
         const loadingTask = pdfjs.getDocument(documentUrl);
         const pdf = await loadingTask.promise;

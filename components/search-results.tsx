@@ -13,9 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, FileText, Eye } from "lucide-react";
 import Image from "next/image";
 import { FallbackDocumentViewer } from "@/components/fallback-document-viewer";
+import { SimplePdfViewer } from "@/components/simple-pdf-viewer";
+import { PartitioningHelpDialog } from "@/components/partitioning-help-dialog";
+import { PdfComponentWrapper } from "@/components/pdf-component-wrapper";
 
 interface SearchResultsProps {
   results: SearchResult[];
@@ -37,6 +41,12 @@ export function SearchResults({
     title: string;
   } | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isSmartPartitionerOpen, setIsSmartPartitionerOpen] = useState(false);
+  const [smartPartitionerDoc, setSmartPartitionerDoc] = useState<{
+    url: string;
+    title: string;
+    searchTerm: string;
+  } | null>(null);
 
   // Appliquer les filtres aux résultats
   const filteredResults = results.filter((result) => {
@@ -79,6 +89,13 @@ export function SearchResults({
   });
 
   const handleViewDocument = (result: SearchResult) => {
+    // Si c'est un PDF et qu'il y a un terme de recherche, utiliser le visualiseur PDF simplifié
+    if (isPdfDocument(result) && searchQuery) {
+      handleSmartPartitioning(result);
+      return;
+    }
+
+    // Sinon, utiliser le visualiseur de document classique
     const documentPath = result.path?.real || result.filePath || "";
     if (documentPath) {
       setSelectedDocument({
@@ -87,6 +104,26 @@ export function SearchResults({
       });
       setIsViewerOpen(true);
     }
+  };
+
+  const handleSmartPartitioning = (result: SearchResult) => {
+    const documentUrl = result.url || result.path?.virtual || "";
+    if (documentUrl && result.fileName?.toLowerCase().endsWith(".pdf")) {
+      setSmartPartitionerDoc({
+        url: documentUrl,
+        title: result.title || result.fileName || "Document PDF",
+        searchTerm: searchQuery,
+      });
+      setIsSmartPartitionerOpen(true);
+    }
+  };
+
+  const isPdfDocument = (result: SearchResult) => {
+    return (
+      result.fileName?.toLowerCase().endsWith(".pdf") ||
+      result.type === "application/pdf" ||
+      result.path?.virtual?.includes(".pdf")
+    );
   };
 
   if (isLoading) {
@@ -110,13 +147,19 @@ export function SearchResults({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {sortedResults.length} résultat{sortedResults.length > 1 ? "s" : ""}{" "}
-        trouvé{sortedResults.length > 1 ? "s" : ""}
-        {totalResults > sortedResults.length
-          ? ` (sur ${totalResults} au total)`
-          : ""}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {sortedResults.length} résultat{sortedResults.length > 1 ? "s" : ""}{" "}
+          trouvé{sortedResults.length > 1 ? "s" : ""}
+          {totalResults > sortedResults.length
+            ? ` (sur ${totalResults} au total)`
+            : ""}
+        </p>
+
+        {/* Afficher l'aide seulement s'il y a des PDF dans les résultats */}
+        {sortedResults.some((result) => isPdfDocument(result)) &&
+          searchQuery && <PartitioningHelpDialog />}
+      </div>
 
       <div className="grid grid-cols-1 gap-4">
         {sortedResults.map((result) => (
@@ -207,12 +250,33 @@ export function SearchResults({
                   )}
                 </CardContent>
 
-                {/* Suppression du bouton Visualiser dans le CardFooter */}
+                {/* Actions et boutons */}
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground ml-auto">
-                    {result.filePath
-                      ? "Cliquez sur le nom du fichier pour le visualiser"
-                      : ""}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      {result.fileName && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDocument(result)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Visualiser
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {isPdfDocument(result) && searchQuery ? (
+                        <span className="text-primary font-medium">
+                          PDF • Visualisation avec recherche
+                        </span>
+                      ) : result.filePath ? (
+                        "Fichier visualisable"
+                      ) : (
+                        ""
+                      )}
+                    </div>
                   </div>
                 </CardFooter>
               </div>
@@ -229,6 +293,18 @@ export function SearchResults({
           isOpen={isViewerOpen}
           onClose={() => setIsViewerOpen(false)}
         />
+      )}
+
+      {smartPartitionerDoc && (
+        <PdfComponentWrapper isOpen={isSmartPartitionerOpen}>
+          <SimplePdfViewer
+            documentUrl={smartPartitionerDoc.url}
+            searchTerm={smartPartitionerDoc.searchTerm}
+            isOpen={isSmartPartitionerOpen}
+            onClose={() => setIsSmartPartitionerOpen(false)}
+            documentTitle={smartPartitionerDoc.title}
+          />
+        </PdfComponentWrapper>
       )}
     </div>
   );

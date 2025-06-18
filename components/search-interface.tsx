@@ -261,21 +261,21 @@ export default function SearchInterface() {
               />
             </DialogContent>
           </Dialog>
-
-          <Button variant="outline" asChild>
-            <a href="/admin">
-              <Database className="h-4 w-4 mr-2" />
-              Administration
-            </a>
-          </Button>
         </div>
         <ThemeToggle />
       </div>
 
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8 text-primary">
-          Recherche Intelligente
-        </h1>
+        <div className="flex items-center justify-center mb-8 space-x-4">
+          <img
+            src="/Logo_DGI_Cameroun.png"
+            alt="Logo DGI Cameroun"
+            className="w-16 h-16 object-contain"
+          />
+          <h1 className="text-4xl font-bold text-primary">
+            Système de Recherche DGI
+          </h1>
+        </div>
 
         <div className="relative">
           <SearchBar

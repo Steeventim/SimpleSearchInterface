@@ -175,6 +175,47 @@ export function transformElasticsearchResults(results: ElasticsearchResult[]) {
       source.path?.virtual ||
       undefined;
 
+    // Générer une URL HTTP valide pour les PDFs
+    let documentUrl = source.url || source.file?.url || `#${result._id}`;
+
+    // Si c'est un PDF avec un chemin file:// ou un chemin local, créer une URL API
+    if (
+      filePath &&
+      (source.file?.extension === "pdf" ||
+        source.file_name?.toLowerCase().endsWith(".pdf"))
+    ) {
+      // Extraire le chemin relatif du fichier
+      let relativePath = filePath;
+
+      // Nettoyer les URLs file://
+      if (relativePath.startsWith("file://")) {
+        relativePath = relativePath.replace("file://", "");
+      }
+
+      // Convertir le chemin absolu en chemin relatif par rapport au répertoire de base
+      const baseDirectory = process.env.PDF_DIRECTORY || "/home/tims/Documents";
+      if (relativePath.startsWith(baseDirectory)) {
+        relativePath = relativePath.substring(baseDirectory.length);
+        if (relativePath.startsWith("/")) {
+          relativePath = relativePath.substring(1);
+        }
+      }
+
+      // Encoder le chemin pour l'URL
+      const encodedPath = relativePath
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/");
+      documentUrl = `/api/pdf/${encodedPath}`;
+
+      console.log("🔄 PDF URL transformée:", {
+        original: filePath,
+        baseDirectory: baseDirectory,
+        relativePath: relativePath,
+        transformed: documentUrl,
+      });
+    }
+
     // Déterminer l'URL de l'image
     const imageUrl =
       source.image_url ||
@@ -184,7 +225,7 @@ export function transformElasticsearchResults(results: ElasticsearchResult[]) {
       id: result._id,
       title: result.highlight?.title?.[0] || source.title,
       description: description,
-      url: source.url || source.file?.url || `#${result._id}`,
+      url: documentUrl,
       type: "Document",
       date: date,
       imageUrl: imageUrl,
