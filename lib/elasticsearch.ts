@@ -1,5 +1,74 @@
+import { Client } from "@elastic/elasticsearch";
+
 // Service pour communiquer avec Elasticsearch
 import type { SearchFiltersType } from "@/components/search-interface";
+
+// Configuration Elasticsearch
+const client = new Client({
+  node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
+});
+
+// Fonction pour obtenir le client Elasticsearch
+export async function getElasticsearchClient() {
+  return client;
+}
+
+// Fonction pour obtenir les documents d'un utilisateur
+export async function getUserDocuments(
+  userId: string,
+  size: number = 20,
+  from: number = 0
+) {
+  try {
+    const result = await client.search({
+      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
+      body: {
+        query: {
+          term: {
+            "user_id.keyword": userId,
+          },
+        },
+        size,
+        from,
+        sort: [{ "file.indexing_date": { order: "desc" } }],
+      },
+    });
+
+    return {
+      documents: result.body.hits.hits,
+      total: result.body.hits.total.value,
+    };
+  } catch (error) {
+    console.error("Erreur lors de la récupération des documents utilisateur:", error);
+    throw error;
+  }
+}
+
+// Fonction pour supprimer un document utilisateur
+export async function deleteUserDocument(userId: string, documentId: string) {
+  try {
+    // Vérifier que le document appartient à l'utilisateur
+    const doc = await client.get({
+      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
+      id: documentId,
+    });
+
+    if (doc.body._source.user_id !== userId) {
+      throw new Error("Document non autorisé pour cet utilisateur");
+    }
+
+    // Supprimer le document
+    await client.delete({
+      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
+      id: documentId,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erreur lors de la suppression du document:", error);
+    throw error;
+  }
+}
 
 // Type pour les résultats Elasticsearch
 export interface ElasticsearchResult {

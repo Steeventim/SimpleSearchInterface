@@ -16,8 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, AlertCircle, Database } from "lucide-react";
+import { Upload, AlertCircle, Database, Settings } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
 
 // Types pour notre application
 export type SearchResult = {
@@ -261,8 +262,19 @@ export default function SearchInterface() {
               />
             </DialogContent>
           </Dialog>
+          
+          {/* Lien vers la bibliothèque de recherche */}
+          <Link href="/admin/search-library">
+            <Button variant="outline" size="sm">
+              <Database className="h-4 w-4 mr-2" />
+              Bibliothèque
+            </Button>
+          </Link>
         </div>
-        <ThemeToggle />
+        
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto">
