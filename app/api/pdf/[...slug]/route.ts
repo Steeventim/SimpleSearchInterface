@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { existsSync, createReadStream } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
 // Répertoire de base pour les PDFs (configurable via env)
@@ -10,8 +10,11 @@ export async function GET(
   { params }: { params: { slug: string[] } }
 ) {
   try {
+    // Next.js 15 - Await params avant utilisation
+    const resolvedParams = await params;
+    
     // Reconstruire le chemin du fichier à partir des segments d'URL
-    const filePath = params.slug.join("/");
+    const filePath = resolvedParams.slug.join("/");
     const decodedPath = decodeURIComponent(filePath);
 
     console.log("🔍 Tentative d'accès au PDF:", {
@@ -54,38 +57,38 @@ export async function GET(
 
     console.log("✅ Servir le PDF:", fullPath);
 
-    // Créer un stream de lecture du fichier
-    const fileStream = createReadStream(fullPath);
+    // Lire le fichier directement en tant que Buffer
+    const fileBuffer = readFileSync(fullPath);
+    
+    // Convertir en Uint8Array pour éviter les problèmes Unicode/ByteString
+    const uint8Array = new Uint8Array(fileBuffer);
 
-    // Convertir le stream en buffer pour Next.js
-    const chunks: Buffer[] = [];
-    for await (const chunk of fileStream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const buffer = Buffer.concat(chunks);
-
-    // Convertir le Buffer Node.js en ArrayBuffer pour le navigateur
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
+    // Encoder correctement le nom de fichier pour les headers
+    const fileName = decodedPath.split("/").pop() || "document.pdf";
+    const encodedFileName = encodeURIComponent(fileName);
 
     // Retourner le PDF avec les bons headers
-    return new NextResponse(arrayBuffer, {
+    return new NextResponse(uint8Array, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Length": buffer.length.toString(),
+        "Content-Length": fileBuffer.length.toString(),
         "Cache-Control": "public, max-age=31536000", // Cache pour 1 an
-        "Content-Disposition": `inline; filename="${decodedPath
-          .split("/")
-          .pop()}"`,
+        "Content-Disposition": `inline; filename*=UTF-8''${encodedFileName}`,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erreur lors de la lecture du PDF:", error);
+    
+    if (error.code === "ENOENT") {
+      return NextResponse.json(
+        { error: "Fichier PDF non trouvé" },
+        { status: 404 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      { error: "Erreur serveur lors de la lecture du PDF" },
       { status: 500 }
     );
   }
