@@ -17,9 +17,14 @@ const nextConfig = {
         ...config.resolve.fallback,
         fs: false,
         path: false,
+        path: false,
         crypto: false,
+        canvas: false,
       };
     }
+
+    // Pour le support de canvas (requis par PDF.js dans certains environnements)
+    config.externals = [...(config.externals || []), { canvas: "canvas" }];
     return config;
   },
   // Headers pour les fichiers .mjs

@@ -21,22 +21,20 @@ export async function getUserDocuments(
 ) {
   try {
     const result = await client.search({
-      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
-      body: {
-        query: {
-          term: {
-            "user_id.keyword": userId,
-          },
+      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
+      query: {
+        term: {
+          "user_id.keyword": userId,
         },
-        size,
-        from,
-        sort: [{ "file.indexing_date": { order: "desc" } }],
       },
+      size,
+      from,
+      sort: [{ "file.indexing_date": { order: "desc" } }],
     });
 
     return {
-      documents: result.body.hits.hits,
-      total: result.body.hits.total.value,
+      documents: result.hits.hits,
+      total: typeof result.hits.total === 'object' ? result.hits.total.value : result.hits.total || 0,
     };
   } catch (error) {
     console.error("Erreur lors de la récupération des documents utilisateur:", error);
@@ -49,17 +47,18 @@ export async function deleteUserDocument(userId: string, documentId: string) {
   try {
     // Vérifier que le document appartient à l'utilisateur
     const doc = await client.get({
-      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
+      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
       id: documentId,
     });
 
-    if (doc.body._source.user_id !== userId) {
+    // @ts-ignore - _source is present but types might need strict definition
+    if (doc._source && doc._source.user_id !== userId) {
       throw new Error("Document non autorisé pour cet utilisateur");
     }
 
     // Supprimer le document
     await client.delete({
-      index: process.env.ELASTICSEARCH_INDEX || "test_deploy",
+      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
       id: documentId,
     });
 
@@ -119,7 +118,7 @@ export interface ElasticsearchResult {
 // Configuration Elasticsearch
 export const elasticsearchConfig = {
   node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
-  index: process.env.ELASTICSEARCH_INDEX || "search_index",
+  index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
   // Authentification optionnelle
   auth: {
     username: process.env.ELASTICSEARCH_USERNAME || "",
@@ -182,7 +181,8 @@ export function buildElasticsearchQuery(
           multi_match: {
             query,
             fields: ["title^3", "description^2", "content", "file_name^2"],
-            fuzziness: "AUTO",
+            operator: "and", // Force all terms to be present
+            // fuzziness: "AUTO", // Disable fuzziness for exact matching
           },
         },
         ...(filterClauses.length > 0 ? { filter: filterClauses } : {}),
@@ -196,6 +196,7 @@ export function buildElasticsearchQuery(
       },
       pre_tags: ["<mark>"],
       post_tags: ["</mark>"],
+      max_analyzed_offset: 1000000,
     },
     ...(filters.sort === "date" ? { sort: [{ date: { order: "desc" } }] } : {}),
   };
@@ -203,17 +204,57 @@ export function buildElasticsearchQuery(
   return esQuery;
 }
 
+// Helper pour extraire un snippet manuellement si Elasticsearch ne renvoie pas de highlight
+function extractSnippet(content: string, query: string, windowData: number = 100): string {
+  if (!content || !query) return "";
+
+  const contentLower = content.toLowerCase();
+  const queryLower = query.toLowerCase();
+  const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 2);
+
+  let bestIndex = -1;
+  let bestTerm = "";
+
+  // Chercher la meilleure occurrence d'un terme
+  for (const term of queryTerms) {
+    const idx = contentLower.indexOf(term);
+    if (idx !== -1) {
+      if (bestIndex === -1 || idx < bestIndex) {
+        bestIndex = idx;
+        bestTerm = term;
+      }
+    }
+  }
+
+  if (bestIndex === -1) return content.substring(0, 200) + "...";
+
+  const start = Math.max(0, bestIndex - windowData);
+  const end = Math.min(content.length, bestIndex + bestTerm.length + windowData);
+
+  let snippet = content.substring(start, end);
+  if (start > 0) snippet = "..." + snippet;
+  if (end < content.length) snippet = snippet + "...";
+
+  // Highlighter grossièrement
+  queryTerms.forEach(term => {
+    snippet = snippet.replace(new RegExp(term, 'gi'), match => `<mark>${match}</mark>`);
+  });
+
+  return snippet;
+}
+
 // Fonction pour transformer les résultats Elasticsearch en format attendu par l'interface
-export function transformElasticsearchResults(results: ElasticsearchResult[]) {
+export function transformElasticsearchResults(results: ElasticsearchResult[], query: string = "") {
   return results.map((result) => {
     const source = result._source;
 
     // Utiliser les highlights s'ils existent
+    // Utiliser les highlights s'ils existent, sinon extraction manuelle, sinon description
     const description =
       result.highlight?.description?.[0] ||
       result.highlight?.content?.[0] ||
       source.description ||
-      "Aucune description disponible";
+      (source.content ? extractSnippet(source.content, query) : "Aucune description disponible");
 
     // Déterminer le type de fichier
     const fileType =
@@ -223,10 +264,10 @@ export function transformElasticsearchResults(results: ElasticsearchResult[]) {
       (source.file_type?.includes("image")
         ? "image"
         : source.file_type?.includes("video")
-        ? "video"
-        : source.file_type?.includes("pdf") || source.file?.extension === "pdf"
-        ? "document"
-        : "article");
+          ? "video"
+          : source.file_type?.includes("pdf") || source.file?.extension === "pdf"
+            ? "document"
+            : "article");
 
     // Déterminer la date
     const date =
@@ -262,12 +303,14 @@ export function transformElasticsearchResults(results: ElasticsearchResult[]) {
       }
 
       // Convertir le chemin absolu en chemin relatif par rapport au répertoire de base
-      const baseDirectory = process.env.PDF_DIRECTORY || "/home/tims/Documents";
+      const baseDirectory = process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
       if (relativePath.startsWith(baseDirectory)) {
         relativePath = relativePath.substring(baseDirectory.length);
-        if (relativePath.startsWith("/")) {
-          relativePath = relativePath.substring(1);
-        }
+      }
+
+      // Ensure no leading slash
+      if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+        relativePath = relativePath.substring(1);
       }
 
       // Encoder le chemin pour l'URL

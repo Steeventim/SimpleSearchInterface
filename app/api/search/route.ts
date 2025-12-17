@@ -37,12 +37,12 @@ export async function GET(request: Request) {
         headers: {
           "Content-Type": "application/json",
           ...(elasticsearchConfig.auth.username &&
-          elasticsearchConfig.auth.password
+            elasticsearchConfig.auth.password
             ? {
-                Authorization: `Basic ${Buffer.from(
-                  `${elasticsearchConfig.auth.username}:${elasticsearchConfig.auth.password}`
-                ).toString("base64")}`,
-              }
+              Authorization: `Basic ${Buffer.from(
+                `${elasticsearchConfig.auth.username}:${elasticsearchConfig.auth.password}`
+              ).toString("base64")}`,
+            }
             : {}),
         },
         body: JSON.stringify(esQuery),
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     console.log("Elasticsearch response:", JSON.stringify(data, null, 2));
 
     // Transformer les résultats
-    const results = transformElasticsearchResults(data.hits.hits);
+    const results = transformElasticsearchResults(data.hits.hits, query);
 
     return NextResponse.json({
       results,

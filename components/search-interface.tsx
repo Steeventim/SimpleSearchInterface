@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, AlertCircle, Database, Settings } from "lucide-react";
@@ -74,7 +75,9 @@ export default function SearchInterface() {
     sort: "relevance",
   });
   const [history, setHistory] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Global loading (deprecated/legacy use)
+  const [isSearching, setIsSearching] = useState(false); // Specific for search execution
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false); // Specific for suggestion fetching
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -87,7 +90,7 @@ export default function SearchInterface() {
   // Récupérer les suggestions depuis l'API
   useEffect(() => {
     if (debouncedQuery.length > 1) {
-      setIsLoading(true);
+      setIsSuggestionsLoading(true);
 
       // Appel à l'API pour les suggestions
       fetch(`/api/suggestions?q=${encodeURIComponent(debouncedQuery)}`)
@@ -111,7 +114,7 @@ export default function SearchInterface() {
           setSuggestions(mockSuggestions);
         })
         .finally(() => {
-          setIsLoading(false);
+          setIsSuggestionsLoading(false);
         });
     } else {
       setSuggestions([]);
@@ -138,7 +141,7 @@ export default function SearchInterface() {
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
 
-    setIsLoading(true);
+    setIsSearching(true);
     setShowSuggestions(false);
     setShowHistory(false);
     setSearchError(null);
@@ -198,7 +201,7 @@ export default function SearchInterface() {
         setResults(mockResults);
       }, 800);
     } finally {
-      setIsLoading(false);
+      setIsSearching(false);
     }
   };
 
@@ -224,8 +227,8 @@ export default function SearchInterface() {
         type: file.type.includes("image")
           ? "image"
           : file.type.includes("video")
-          ? "video"
-          : "document",
+            ? "video"
+            : "document",
         date: new Date().toISOString(),
         imageUrl: file.type.includes("image")
           ? URL.createObjectURL(file)
@@ -246,7 +249,7 @@ export default function SearchInterface() {
         <div className="flex items-center gap-2">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" suppressHydrationWarning>
                 <Upload className="h-4 w-4 mr-2" />
                 Télécharger des fichiers
               </Button>
@@ -254,6 +257,9 @@ export default function SearchInterface() {
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Télécharger des fichiers</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Glissez-déposez vos fichiers ici pour les indexer
+                </DialogDescription>
               </DialogHeader>
               <FileUpload
                 onUploadComplete={handleFileUploadComplete}
@@ -262,16 +268,16 @@ export default function SearchInterface() {
               />
             </DialogContent>
           </Dialog>
-          
+
           {/* Lien vers la bibliothèque de recherche */}
           <Link href="/admin/search-library">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" suppressHydrationWarning>
               <Database className="h-4 w-4 mr-2" />
               Bibliothèque
             </Button>
           </Link>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <ThemeToggle />
         </div>
@@ -294,7 +300,7 @@ export default function SearchInterface() {
             query={query}
             setQuery={setQuery}
             onSearch={handleSearch}
-            isLoading={isLoading}
+            isLoading={isSearching}
             onFocus={() =>
               query.length > 0 ? setShowSuggestions(true) : setShowHistory(true)
             }

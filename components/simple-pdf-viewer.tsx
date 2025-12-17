@@ -234,16 +234,6 @@ export function SimplePdfViewer({
     loadPdf();
   }, [isOpen, documentUrl, searchTerm, pdfjs, pdfjsLoading]);
 
-  // Navigation
-  const goToPreviousPartition = () => {
-    setCurrentPartition((prev) => Math.max(0, prev - 1));
-  };
-
-  const goToNextPartition = () => {
-    setCurrentPartition((prev) =>
-      Math.min(partitionedPages.length - 1, prev + 1)
-    );
-  };
 
   // Fonctions de zoom
   const zoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 3));
@@ -308,147 +298,108 @@ export function SimplePdfViewer({
                 <Card>
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
-                      {/* Navigation */}
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={goToPreviousPartition}
-                          disabled={currentPartition === 0}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-
-                        <div className="text-sm font-medium px-3">
-                          Page {partitionedPages[currentPartition]?.pageNumber}{" "}
-                          / {analysisResults?.totalPages}
+                      {/* Info & Stats */}
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm font-medium px-3 flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                          {partitionedPages.length} pages pertinentes affichées
+                          <span className="text-gray-400 mx-2">/</span>
+                          {analysisResults?.totalPages} pages totales
                         </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={goToNextPartition}
-                          disabled={
-                            currentPartition === partitionedPages.length - 1
-                          }
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Info de recherche */}
-                      <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
                           <Search className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm">"{searchTerm}"</span>
-                          {partitionedPages[currentPartition]
-                            ?.hasSearchTerm && (
-                            <Badge variant="default" className="bg-green-600">
-                              {partitionedPages[currentPartition].searchMatches}{" "}
-                              correspondances
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Contrôles de zoom */}
-                        <div className="flex items-center space-x-1 border rounded px-2 py-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={zoomOut}
-                            disabled={zoomLevel <= 0.5}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ZoomOut className="h-3 w-3" />
-                          </Button>
-                          <span className="text-xs font-medium min-w-[3rem] text-center">
-                            {Math.round(zoomLevel * 100)}%
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={zoomIn}
-                            disabled={zoomLevel >= 3}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ZoomIn className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={resetZoom}
-                            className="h-6 w-6 p-0"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                          </Button>
+                          <span className="text-sm border-l pl-2">"{searchTerm}" found {analysisResults?.contentPages.length} times</span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Navigation par points */}
-                    <div className="flex justify-center mt-2">
-                      <div className="flex space-x-1 bg-gray-100 p-1 rounded">
-                        {partitionedPages.map((partition, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setCurrentPartition(index)}
-                            className={`px-2 py-1 rounded text-xs transition-all ${
-                              index === currentPartition
-                                ? "bg-blue-600 text-white"
-                                : "text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            Page {partition.pageNumber}
-                            {partition.hasSearchTerm && (
-                              <span className="ml-1">🔍</span>
-                            )}
-                          </button>
-                        ))}
+                      {/* Contrôles de zoom */}
+                      <div className="flex items-center space-x-1 border rounded px-2 py-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={zoomOut}
+                          disabled={zoomLevel <= 0.5}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ZoomOut className="h-3 w-3" />
+                        </Button>
+                        <span className="text-xs font-medium min-w-[3rem] text-center">
+                          {Math.round(zoomLevel * 100)}%
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={zoomIn}
+                          disabled={zoomLevel >= 3}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ZoomIn className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={resetZoom}
+                          className="h-6 w-6 p-0"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Zone d'affichage du PDF - Pleine taille optimisée */}
-              <div className="flex-1 bg-gray-50 rounded-lg overflow-hidden min-h-0">
-                <div className="h-full w-full flex items-center justify-center p-4">
-                  {partitionedPages[currentPartition] && (
-                    <div className="relative max-w-full max-h-full">
+              {/* Zone d'affichage du PDF - Liste défilante */}
+              <div className="flex-1 bg-gray-50 rounded-lg overflow-y-auto min-h-0 p-4">
+                <div className="flex flex-col items-center space-y-6">
+                  {partitionedPages.map((partition, index) => (
+                    <div key={index} className="relative shadow-xl border border-gray-300 bg-white rounded">
+                      <div className="absolute -top-3 -left-3 z-10">
+                        <Badge variant="outline" className="bg-white font-bold border-blue-200 text-blue-700">
+                          Page {partition.pageNumber}
+                        </Badge>
+                      </div>
+
                       <canvas
                         ref={(canvas) => {
-                          if (canvas && partitionedPages[currentPartition]) {
+                          if (canvas) {
                             const ctx = canvas.getContext("2d");
-                            const sourceCanvas =
-                              partitionedPages[currentPartition].canvas;
-                            canvas.width = sourceCanvas.width;
-                            canvas.height = sourceCanvas.height;
-                            ctx?.drawImage(sourceCanvas, 0, 0);
+                            const sourceCanvas = partition.canvas;
+                            // Éviter de redessiner si déjà fait (simple check)
+                            if (canvas.width !== sourceCanvas.width) {
+                              canvas.width = sourceCanvas.width;
+                              canvas.height = sourceCanvas.height;
+                              ctx?.drawImage(sourceCanvas, 0, 0);
+                            }
                           }
                         }}
-                        className="max-w-full max-h-full object-contain shadow-xl border border-gray-300 bg-white rounded"
+                        className="max-w-full object-contain bg-white rounded"
                         style={{
                           transform: `scale(${zoomLevel})`,
-                          transformOrigin: "center center",
+                          transformOrigin: "top center",
                           transition: "transform 0.2s ease-in-out",
                         }}
                       />
 
                       {/* Badge de correspondances flottant */}
-                      {partitionedPages[currentPartition].hasSearchTerm && (
+                      {partition.hasSearchTerm && (
                         <div className="absolute top-2 right-2">
                           <Badge
                             variant="default"
-                            className="bg-green-600 shadow-lg"
+                            className="bg-green-600 shadow-lg opacity-90"
                           >
                             <Search className="h-3 w-3 mr-1" />
-                            {
-                              partitionedPages[currentPartition].searchMatches
-                            }{" "}
-                            correspondances
+                            {partition.searchMatches} correspondances
                           </Badge>
                         </div>
                       )}
+                    </div>
+                  ))}
+
+                  {partitionedPages.length === 0 && (
+                    <div className="py-20 text-center text-gray-500">
+                      Aucune page à afficher
                     </div>
                   )}
                 </div>

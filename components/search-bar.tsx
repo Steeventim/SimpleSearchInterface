@@ -29,6 +29,7 @@ export function SearchBar({ query, setQuery, onSearch, isLoading, onFocus }: Sea
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={onFocus}
+          suppressHydrationWarning
         />
         <div className="absolute left-3 text-muted-foreground">
           <Search size={20} />

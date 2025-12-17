@@ -40,7 +40,7 @@ export const initializePdfjs = async () => {
         }
       } catch (error) {
         // Fallback vers CDN
-        const cdnWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.2.133/pdf.worker.mjs`;
+        const cdnWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
         pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerSrc;
         console.log("⚠️ Fallback vers worker CDN");
       }

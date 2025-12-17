@@ -1,0 +1,95 @@
+Testing connection to Elasticsearch...
+Cluster health: {
+  cluster_name: 'elasticsearch',
+  status: 'yellow',
+  timed_out: false,
+  number_of_nodes: 1,
+  number_of_data_nodes: 1,
+  active_primary_shards: 94,
+  active_shards: 94,
+  relocating_shards: 0,
+  initializing_shards: 0,
+  unassigned_shards: 25,
+  unassigned_primary_shards: 0,
+  delayed_unassigned_shards: 0,
+  number_of_pending_tasks: 0,
+  number_of_in_flight_fetch: 0,
+  task_max_waiting_in_queue_millis: 0,
+  active_shards_percent_as_number: 78.99159663865547
+}
+Checking index "toptop_v3"...
+Index "toptop_v3" exists: true
+Testing search...
+Elasticsearch Error Message: media_type_header_exception
+	Caused by:
+		status_exception: Accept version must be either version 8 or 7, but found 9. Accept=application/vnd.elasticsearch+json; compatible-with=9
+	Root causes:
+		media_type_header_exception: Invalid media-type value on headers [Content-Type, Accept]
+Error Meta: {
+  "body": {
+    "error": {
+      "root_cause": [
+        {
+          "type": "media_type_header_exception",
+          "reason": "Invalid media-type value on headers [Content-Type, Accept]"
+        }
+      ],
+      "type": "media_type_header_exception",
+      "reason": "Invalid media-type value on headers [Content-Type, Accept]",
+      "caused_by": {
+        "type": "status_exception",
+        "reason": "Accept version must be either version 8 or 7, but found 9. Accept=application/vnd.elasticsearch+json; compatible-with=9"
+      }
+    },
+    "status": 400
+  },
+  "statusCode": 400,
+  "headers": {
+    "x-elastic-product": "Elasticsearch",
+    "content-type": "application/json",
+    "content-length": "426"
+  },
+  "meta": {
+    "context": null,
+    "request": {
+      "params": {
+        "method": "POST",
+        "path": "/toptop_v3/_search",
+        "body": "{\"query\":{\"match_all\":{}}}",
+        "querystring": "",
+        "headers": {
+          "user-agent": "elasticsearch-js/9.2.0 (win32 10.0.26200-x64; Node.js 22.14.0; Transport 9.2.3)",
+          "x-elastic-client-meta": "es=9.2.0,js=22.14.0,t=9.2.3,un=22.14.0",
+          "content-type": "application/vnd.elasticsearch+json; compatible-with=9",
+          "accept": "application/vnd.elasticsearch+json; compatible-with=9",
+          "content-length": "26"
+        }
+      },
+      "options": {},
+      "id": 3
+    },
+    "name": "elasticsearch-js",
+    "connection": {
+      "url": "http://localhost:9200/",
+      "tls": null,
+      "id": "http://localhost:9200/",
+      "timeout": null,
+      "headers": {
+        "user-agent": "elasticsearch-js/9.2.0 (win32 10.0.26200-x64; Node.js 22.14.0; Transport 9.2.3)",
+        "x-elastic-client-meta": "es=9.2.0,js=22.14.0,t=9.2.3,un=22.14.0"
+      },
+      "deadCount": 0,
+      "resurrectTimeout": 0,
+      "_openRequests": 0,
+      "weight": 1000,
+      "maxEventListeners": 100,
+      "pool": {
+        "_events": {},
+        "_eventsCount": 2
+      }
+    },
+    "attempts": 0,
+    "aborted": false
+  },
+  "warnings": null
+}
