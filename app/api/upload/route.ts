@@ -39,8 +39,8 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     const userDivision = (session?.user as any)?.division || "general";
 
-    // Construire le chemin complet du répertoire (cenadi/DIVISION)
-    const divisionSubDir = path.join("cenadi", userDivision);
+    // Construire le chemin complet du répertoire (DIVISION)
+    const divisionSubDir = userDivision;
     const uploadDir = path.join(
       uploadConfig.baseDir,
       divisionSubDir

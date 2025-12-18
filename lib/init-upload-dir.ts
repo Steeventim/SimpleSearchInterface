@@ -22,15 +22,7 @@ export function initUploadDirectory() {
         `Le répertoire d'upload ${uploadDir} est accessible en écriture`
       );
 
-      // Créer des sous-répertoires courants s'ils n'existent pas
-      const commonDirs = ["documents", "images", "videos", "others"];
-      for (const dir of commonDirs) {
-        const subDir = path.join(uploadDir, dir);
-        if (!fs.existsSync(subDir)) {
-          console.log(`Création du sous-répertoire: ${subDir}`);
-          fs.mkdirSync(subDir, { recursive: true });
-        }
-      }
+      /* Removing generic sub-directory creation as per user request for clean root */
     } catch (error) {
       console.error(
         `Le répertoire d'upload ${uploadDir} n'est pas accessible en écriture:`,

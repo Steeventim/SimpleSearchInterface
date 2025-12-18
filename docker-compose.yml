@@ -1,45 +1,111 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
-  search-engine:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
-      - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX}
-      - UPLOAD_DIRECTORY=${UPLOAD_DIRECTORY}
-    volumes:
-      - ${UPLOAD_DIRECTORY}:/app/uploads:ro
-      - ./data:/app/data
-    restart: unless-stopped
-    networks:
-      - search-network
-
-  # Optionnel: Elasticsearch local
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: cenadi-elasticsearch
     environment:
+      - node.name=es01
+      - cluster.name=cenadi-search-cluster
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
-    volumes:
-      - es_data:/usr/share/elasticsearch/data
     networks:
-      - search-network
+      - cenadi-net
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-networks:
-  search-network:
-    driver: bridge
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: cenadi-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - cenadi-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: cenadi-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mkounga10
+      - POSTGRES_DB=cenadi_search
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cenadi-net
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: cenadi-app
+    environment:
+      - DATABASE_URL=postgresql://postgres:mkounga10@db:5432/cenadi_search
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=cenadi_documents
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - UPLOAD_DIRECTORY=/app/uploads
+      - ALLOWED_FILE_TYPES=${ALLOWED_FILE_TYPES}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ${UPLOAD_DIRECTORY}:/app/uploads
+    networks:
+      - cenadi-net
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  fscrawler:
+    image: dadoonet/fscrawler:2.10-SNAPSHOT
+    container_name: cenadi-fscrawler
+    volumes:
+      - ${UPLOAD_DIRECTORY}:/tmp/fscrawler/data:ro
+      - ./docker/fscrawler/config:/root/.fscrawler
+      - ./docker/fscrawler/logs:/usr/share/fscrawler/logs
+    environment:
+      - FS_JAVA_OPTS=-Xmx2g
+    command: cenadi_job --loop 100000 --rest
+    networks:
+      - cenadi-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  es_data:
-    driver: local
+  es-data:
+  pg-data:
+
+
+networks:
+  cenadi-net:
+    driver: bridge
