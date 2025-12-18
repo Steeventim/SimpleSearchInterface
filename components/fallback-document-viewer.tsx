@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -81,10 +82,11 @@ export function FallbackDocumentViewer({
 
           if (!pagesResponse.ok) {
             const errorData = await pagesResponse.json().catch(() => ({}));
-            throw new Error(
-              errorData.error ||
-                "Erreur lors de la récupération des pages du document"
-            );
+            const msg = errorData.error || "L'aperçu par pages n'est pas disponible pour ce document.";
+            console.warn("Pages API warning:", msg);
+            setPagesError(msg);
+            setLoading(false);
+            return;
           }
 
           const pagesData = await pagesResponse.json();
@@ -106,7 +108,7 @@ export function FallbackDocumentViewer({
           );
           setPagesError(
             pagesError.message ||
-              "Erreur lors de la récupération des pages du document"
+            "Erreur lors de la récupération des pages du document"
           );
           // Ne pas bloquer l'affichage du document si les pages ne peuvent pas être récupérées
         }
@@ -281,24 +283,31 @@ export function FallbackDocumentViewer({
                         title={documentTitle || "Document texte"}
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full py-12">
-                        <p className="mb-4 text-muted-foreground">
-                          La prévisualisation n'est pas disponible pour ce type
-                          de document.
+                      <div className="flex flex-col items-center justify-center h-full py-12 text-center px-4">
+                        <div className="bg-primary/10 p-6 rounded-full mb-6">
+                          <FileText className="h-12 w-12 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">
+                          Prévisualisation non disponible
+                        </h3>
+                        <p className="mb-6 text-muted-foreground max-w-md">
+                          Ce type de document ({documentPath.split('.').pop()?.toUpperCase()})
+                          ne peut pas être affiché directement dans le navigateur.
+                          Veuillez le télécharger pour le consulter avec votre application locale (ex: Microsoft PowerPoint).
                         </p>
-                        <div className="flex gap-2">
-                          <Button variant="outline" onClick={handleDownload}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Télécharger
+                        <div className="flex flex-wrap gap-3 justify-center">
+                          <Button variant="default" size="lg" onClick={handleDownload}>
+                            <Download className="h-5 w-5 mr-2" />
+                            Télécharger le fichier
                           </Button>
-                          <Button variant="default" asChild>
+                          <Button variant="outline" size="lg" asChild>
                             <a
                               href={fileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Ouvrir dans un nouvel onglet
+                              <ExternalLink className="h-5 w-5 mr-2" />
+                              Ouvrir directement
                             </a>
                           </Button>
                         </div>
@@ -359,9 +368,8 @@ export function FallbackDocumentViewer({
                                 currentPage === index ? "default" : "outline"
                               }
                               size="sm"
-                              className={`w-8 h-8 p-0 ${
-                                page.hasSearchTerm ? "border-primary" : ""
-                              }`}
+                              className={`w-8 h-8 p-0 ${page.hasSearchTerm ? "border-primary" : ""
+                                }`}
                               onClick={() => setCurrentPage(index)}
                             >
                               {page.pageNumber}

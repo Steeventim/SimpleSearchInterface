@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import {
   buildElasticsearchQuery,
   elasticsearchConfig,
@@ -19,12 +21,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ results: [], total: 0 });
     }
 
+    // Obtenir la session pour le RBAC
+    const session = await getServerSession(authOptions);
+    const userRole = (session?.user as any)?.role;
+    const userDivision = (session?.user as any)?.division;
+
     // Construire la requête Elasticsearch
     const esQuery = buildElasticsearchQuery(
       query,
       { date, type, sort } as any,
       size,
-      from
+      from,
+      userDivision,
+      userRole
     );
 
     console.log("Elasticsearch query:", JSON.stringify(esQuery, null, 2));

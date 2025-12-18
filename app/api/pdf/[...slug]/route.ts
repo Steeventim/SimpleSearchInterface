@@ -13,8 +13,10 @@ function normalizeForMatch(str: string): string {
   return str
     .normalize("NFC")
     .toLowerCase()
-    .replace(/[^\w\s\-\.]/g, "") // Garder seulement alphanum, espaces, tirets, points
-    .replace(/\s+/g, " ")
+    .replace(/_/g, " ") // Underscores -> Spaces
+    .replace(/\u00a0/g, " ") // Non-breaking space -> Space
+    .replace(/[^\w\s\-\.]/g, " ") // Special chars -> Spaces
+    .replace(/\s+/g, " ") // Collapse multiple spaces
     .trim();
 }
 
@@ -50,53 +52,90 @@ function findFileRecursively(dir: string, filename: string): string | null {
   return null;
 }
 
+// Map des types MIME par extension
+const MIME_TYPES: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".doc": "application/msword",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls": "application/vnd.ms-excel",
+};
+
+// Extensions de fichiers supportées
+const SUPPORTED_EXTENSIONS = [".pdf", ".pptx", ".ppt", ".docx", ".doc", ".xlsx", ".xls"];
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
     const { slug } = await params;
-    // Next.js 15 - Await params avant utilisation
-    const resolvedParams = await params;
 
     // Reconstruire le chemin du fichier à partir des segments d'URL
-    const filePath = resolvedParams.slug.join("/");
+    const filePath = slug.join("/");
     const decodedPath = decodeURIComponent(filePath);
+    const fileName = decodedPath.split("/").pop() || decodedPath;
 
-    console.log("🔍 Tentative d'accès au PDF:", {
+    // Déterminer l'extension et le type MIME
+    const ext = path.extname(fileName).toLowerCase();
+    const mimeType = MIME_TYPES[ext] || "application/octet-stream";
+
+    // Vérifier que l'extension est supportée
+    if (!SUPPORTED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: `Type de fichier non supporté: ${ext}. Extensions supportées: ${SUPPORTED_EXTENSIONS.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    console.log("🔍 Tentative d'accès au fichier:", {
       originalPath: filePath,
       decodedPath: decodedPath,
+      fileName: fileName,
+      extension: ext,
       baseDirectory: PDF_BASE_DIRECTORY,
     });
 
-    // Construire le chemin complet du fichier
-    let fullPath = join(PDF_BASE_DIRECTORY, decodedPath);
+    // Stratégie de recherche du fichier
+    let fullPath: string | null = null;
 
-    // Vérifier que le fichier existe et qu'il est dans le répertoire autorisé
-    if (!existsSync(fullPath)) {
-      // Tenter de trouver le fichier directement à la racine du dossier (fallback pour migration chemins Linux -> Windows)
-      const fileName = decodedPath.split("/").pop() || decodedPath;
-      const fallbackPath = join(PDF_BASE_DIRECTORY, fileName);
+    // 1. Essayer le chemin complet
+    const directPath = join(PDF_BASE_DIRECTORY, decodedPath);
+    if (existsSync(directPath)) {
+      fullPath = directPath;
+      console.log("✅ Fichier trouvé au chemin direct:", fullPath);
+    }
 
-      if (existsSync(fallbackPath)) {
-        console.log(`⚠️ Chemin original non trouvé, utilisation du fallback: ${fallbackPath}`);
-        fullPath = fallbackPath;
-      } else {
-        console.error("❌ Fichier PDF non trouvé:", fullPath);
-        return NextResponse.json(
-          { error: "Fichier PDF non trouvé" },
-          { status: 404 }
-        );
+    // 2. Essayer à la racine du dossier
+    if (!fullPath) {
+      const rootPath = join(PDF_BASE_DIRECTORY, fileName);
+      if (existsSync(rootPath)) {
+        fullPath = rootPath;
+        console.log("✅ Fichier trouvé à la racine:", fullPath);
       }
     }
 
-    // Vérifier que le chemin est sécurisé (pas de remontée de répertoire)
-    const normalizedBase = join(PDF_BASE_DIRECTORY, "/");
-    // S'assurer que fullPath se termine par un séparateur pour la comparaison si c'est un dossier (pas le cas ici) 
-    // ou simplement utiliser startsWith sur le path resolve
-    // On normalise simplement les séparateurs pour la comparaison
+    // 3. Recherche récursive avec correspondance normalisée
+    if (!fullPath) {
+      console.log("🔄 Recherche récursive du fichier:", fileName);
+      fullPath = findFileRecursively(PDF_BASE_DIRECTORY, fileName);
+      if (fullPath) {
+        console.log("✅ Fichier trouvé par recherche récursive:", fullPath);
+      }
+    }
 
-    // Note: Pour Windows, on normalise les séparateurs
+    // Si toujours pas trouvé
+    if (!fullPath) {
+      console.error("❌ Fichier non trouvé après toutes les tentatives:", fileName);
+      return NextResponse.json(
+        { error: "Fichier non trouvé", details: { fileName, searchedIn: PDF_BASE_DIRECTORY } },
+        { status: 404 }
+      );
+    }
+
+    // Vérifier que le chemin est sécurisé (pas de remontée de répertoire)
     const normalizedFullPath = fullPath.replace(/\\/g, "/");
     const normalizedBaseCheck = PDF_BASE_DIRECTORY.replace(/\\/g, "/");
 
@@ -108,15 +147,7 @@ export async function GET(
       );
     }
 
-    // Vérifier que c'est bien un PDF
-    if (!decodedPath.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json(
-        { error: "Seuls les fichiers PDF sont autorisés" },
-        { status: 400 }
-      );
-    }
-
-    console.log("✅ Servir le PDF:", fullPath);
+    console.log("✅ Servir le fichier:", fullPath, "Type:", mimeType);
 
     // Lire le fichier directement en tant que Buffer
     const fileBuffer = readFileSync(fullPath);
@@ -125,31 +156,30 @@ export async function GET(
     const uint8Array = new Uint8Array(fileBuffer);
 
     // Encoder correctement le nom de fichier pour les headers
-    const fileName = decodedPath.split("/").pop() || "document.pdf";
-    const encodedFileName = encodeURIComponent(fileName);
+    const encodedFileName = encodeURIComponent(path.basename(fullPath));
 
-    // Retourner le PDF avec les bons headers
+    // Retourner le fichier avec les bons headers
     return new NextResponse(uint8Array, {
       status: 200,
       headers: {
-        "Content-Type": "application/pdf",
+        "Content-Type": mimeType,
         "Content-Length": fileBuffer.length.toString(),
         "Cache-Control": "public, max-age=31536000", // Cache pour 1 an
         "Content-Disposition": `inline; filename*=UTF-8''${encodedFileName}`,
       },
     });
   } catch (error: any) {
-    console.error("❌ Erreur lors de la lecture du PDF:", error);
+    console.error("❌ Erreur lors de la lecture du fichier:", error);
 
     if (error.code === "ENOENT") {
       return NextResponse.json(
-        { error: "Fichier PDF non trouvé" },
+        { error: "Fichier non trouvé" },
         { status: 404 }
       );
     }
 
     return NextResponse.json(
-      { error: "Erreur serveur lors de la lecture du PDF" },
+      { error: "Erreur serveur lors de la lecture du fichier" },
       { status: 500 }
     );
   }

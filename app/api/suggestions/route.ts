@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { elasticsearchConfig } from "@/lib/elasticsearch"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -39,9 +41,10 @@ async function loadLearnedTerms(): Promise<Map<string, SearchTerm>> {
 }
 
 export async function GET(request: Request) {
+  let query = ""
   try {
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get("q") || ""
+    query = searchParams.get("q") || ""
     const maxResults = parseInt(searchParams.get("limit") || "8")
 
     if (!query || query.length < 2) {
@@ -51,9 +54,14 @@ export async function GET(request: Request) {
     // Combiner plusieurs types de suggestions
     const suggestions: Suggestion[] = []
 
+    // 0. Récupérer la session pour le RBAC
+    const session = await getServerSession(authOptions)
+    const userRole = (session?.user as any)?.role
+    const userDivision = (session?.user as any)?.division
+
     // 1. Suggestions par complétion Elasticsearch
     try {
-      const elasticSuggestions = await getElasticsearchSuggestions(query)
+      const elasticSuggestions = await getElasticsearchSuggestions(query, userDivision, userRole)
       suggestions.push(...elasticSuggestions)
     } catch (error) {
       console.warn("Elasticsearch suggestions failed:", error)
@@ -81,7 +89,7 @@ export async function GET(request: Request) {
       .sort((a, b) => b.score - a.score)
       .slice(0, maxResults)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       suggestions: topSuggestions.map(s => s.text),
       enhanced: topSuggestions // Version avec métadonnées
     })
@@ -91,36 +99,37 @@ export async function GET(request: Request) {
   }
 }
 
-async function getElasticsearchSuggestions(query: string): Promise<Suggestion[]> {
+async function getElasticsearchSuggestions(query: string, division?: string, role?: string): Promise<Suggestion[]> {
+  // Filtre de division pour les suggestions
+  const pathFilter = role !== "CENADI_DIRECTOR" && division ? {
+    wildcard: { "path.real": `*/${division}/*` }
+  } : null;
+
+  // Puisque le champ 'suggest' de type completion n'existe pas dans le mapping,
+  // nous utilisons une recherche standard avec match_phrase_prefix sur le titre et le contenu.
   const esQuery = {
-    suggest: {
-      text: query,
-      completion: {
-        prefix: query,
-        completion: {
-          field: "suggest",
-          size: 5,
-          skip_duplicates: true,
-          fuzzy: {
-            fuzziness: "AUTO",
-            min_length: 3
-          },
+    size: 0, // Nous n'avons pas besoin des hits, seulement des suggestions
+    query: pathFilter ? { bool: { filter: [pathFilter] } } : { match_all: {} },
+    aggs: {
+      "title-suggestions": {
+        filter: {
+          bool: {
+            must: [
+              { prefix: { "file.filename": query.toLowerCase() } }
+            ],
+            ...(pathFilter ? { filter: [pathFilter] } : {})
+          }
         },
-      },
-      phrase: {
-        text: query,
-        phrase: {
-          field: "content",
-          size: 3,
-          gram_size: 3,
-          direct_generator: [{
-            field: "content",
-            suggest_mode: "always",
-            min_word_length: 2
-          }]
+        aggs: {
+          "titles": {
+            terms: {
+              field: "file.filename",
+              size: 5
+            }
+          }
         }
       }
-    },
+    }
   }
 
   const response = await fetch(`${elasticsearchConfig.node}/${elasticsearchConfig.index}/_search`, {
@@ -129,10 +138,10 @@ async function getElasticsearchSuggestions(query: string): Promise<Suggestion[]>
       "Content-Type": "application/json",
       ...(elasticsearchConfig.auth.username && elasticsearchConfig.auth.password
         ? {
-            Authorization: `Basic ${Buffer.from(
-              `${elasticsearchConfig.auth.username}:${elasticsearchConfig.auth.password}`,
-            ).toString("base64")}`,
-          }
+          Authorization: `Basic ${Buffer.from(
+            `${elasticsearchConfig.auth.username}:${elasticsearchConfig.auth.password}`,
+          ).toString("base64")}`,
+        }
         : {}),
     },
     body: JSON.stringify(esQuery),
@@ -145,19 +154,19 @@ async function getElasticsearchSuggestions(query: string): Promise<Suggestion[]>
   const data = await response.json()
   const suggestions: Suggestion[] = []
 
-  // Completion suggestions
-  const completions = data.suggest?.completion[0]?.options || []
-  completions.forEach((option: any) => {
+  // Title suggestions from aggregations
+  const titleBuckets = data.aggregations?.["title-suggestions"]?.titles?.buckets || []
+  titleBuckets.forEach((bucket: any) => {
     suggestions.push({
-      text: option.text,
+      text: bucket.key,
       type: 'completion',
-      score: option._score || 1,
-      category: 'auto-complete'
+      score: 1.0,
+      category: 'title-match'
     })
   })
 
   // Phrase suggestions
-  const phrases = data.suggest?.phrase[0]?.options || []
+  const phrases = data.suggest?.["phrase-suggest"]?.[0]?.options || []
   phrases.forEach((option: any) => {
     suggestions.push({
       text: option.text,
@@ -236,7 +245,7 @@ function getContextualSuggestions(query: string): Suggestion[] {
 
 function getSpellingSuggestions(query: string): Suggestion[] {
   const suggestions: Suggestion[] = []
-  
+
   // Corrections orthographiques courantes
   const corrections = [
     { wrong: 'decret', correct: 'décret' },
@@ -275,7 +284,7 @@ async function getLearnedSuggestions(query: string): Promise<Suggestion[]> {
     // Filtrer les termes qui correspondent à la requête
     learnedTerms.forEach((searchTerm, key) => {
       const termLower = key.toLowerCase()
-      
+
       // Correspondance exacte au début
       if (termLower.startsWith(queryLower) && termLower !== queryLower) {
         suggestions.push({
@@ -287,7 +296,7 @@ async function getLearnedSuggestions(query: string): Promise<Suggestion[]> {
           frequency: searchTerm.frequency
         })
       }
-      
+
       // Correspondance dans les variantes
       searchTerm.variants.forEach(variant => {
         const variantLower = variant.toLowerCase()
@@ -317,62 +326,62 @@ async function getLearnedSuggestions(query: string): Promise<Suggestion[]> {
 function calculateLearnedScore(searchTerm: SearchTerm, query: string): number {
   const baseScore = Math.min(searchTerm.frequency / 10, 1) // Score basé sur la fréquence (max 1.0)
   const relevanceScore = calculateRelevance(searchTerm.term, query)
-  
+
   // Bonus pour les recherches récentes
   const daysSinceLastUse = (Date.now() - searchTerm.lastUsed.getTime()) / (1000 * 60 * 60 * 24)
   const recencyBonus = Math.max(0, 1 - daysSinceLastUse / 30) * 0.2 // Bonus de 0.2 pour les recherches de moins de 30 jours
-  
+
   return (baseScore * 0.6 + relevanceScore * 0.4) + recencyBonus
 }
 
 function calculatePopularityScore(term: string, query: string): number {
   const queryLower = query.toLowerCase()
   const termLower = term.toLowerCase()
-  
+
   // Score plus élevé si le terme commence par la requête
   if (termLower.startsWith(queryLower)) {
     return 0.9
   }
-  
+
   // Score moyen si le terme contient la requête
   if (termLower.includes(queryLower)) {
     return 0.6
   }
-  
+
   // Score de base
   return 0.3
 }
 
 function deduplicateAndScore(suggestions: Suggestion[], query: string): Suggestion[] {
   const uniqueMap = new Map<string, Suggestion>()
-  
+
   suggestions.forEach(suggestion => {
     const key = suggestion.text.toLowerCase()
     const existing = uniqueMap.get(key)
-    
+
     if (!existing || suggestion.score > existing.score) {
       // Ajuster le score en fonction de la pertinence avec la requête
       const adjustedScore = suggestion.score * calculateRelevance(suggestion.text, query)
       uniqueMap.set(key, { ...suggestion, score: adjustedScore })
     }
   })
-  
+
   return Array.from(uniqueMap.values())
 }
 
 function calculateRelevance(suggestion: string, query: string): number {
   const suggestionLower = suggestion.toLowerCase()
   const queryLower = query.toLowerCase()
-  
+
   // Exact match
   if (suggestionLower === queryLower) return 1.0
-  
+
   // Starts with query
   if (suggestionLower.startsWith(queryLower)) return 0.9
-  
+
   // Contains query
   if (suggestionLower.includes(queryLower)) return 0.7
-  
+
   // Fuzzy match (simple Levenshtein distance approximation)
   const distance = levenshteinDistance(suggestionLower, queryLower)
   const maxLength = Math.max(suggestionLower.length, queryLower.length)
@@ -381,15 +390,15 @@ function calculateRelevance(suggestion: string, query: string): number {
 
 function levenshteinDistance(str1: string, str2: string): number {
   const matrix = []
-  
+
   for (let i = 0; i <= str2.length; i++) {
     matrix[i] = [i]
   }
-  
+
   for (let j = 0; j <= str1.length; j++) {
     matrix[0][j] = j
   }
-  
+
   for (let i = 1; i <= str2.length; i++) {
     for (let j = 1; j <= str1.length; j++) {
       if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
@@ -403,7 +412,7 @@ function levenshteinDistance(str1: string, str2: string): number {
       }
     }
   }
-  
+
   return matrix[str2.length][str1.length]
 }
 

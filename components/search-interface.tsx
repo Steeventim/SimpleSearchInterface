@@ -17,7 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, AlertCircle, Database, Settings } from "lucide-react";
+import { Upload, AlertCircle, Database, Settings, Search } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 
@@ -284,15 +284,14 @@ export default function SearchInterface() {
       </div>
 
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-center mb-8 space-x-4">
-          <img
-            src="/Logo_DGI_Cameroun.png"
-            alt="Logo DGI Cameroun"
-            className="w-16 h-16 object-contain"
-          />
-          <h1 className="text-4xl font-bold text-primary">
-            Système de Recherche DGI
+        <div className="flex flex-col items-center justify-center mb-8">
+          <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg">
+            <Search className="w-10 h-10" />
+          </div>
+          <h1 className="text-4xl font-bold text-primary tracking-tight">
+            Système de Recherche CENADI
           </h1>
+          <p className="text-muted-foreground mt-2">Centre National de Développement Informatique</p>
         </div>
 
         <div className="relative">

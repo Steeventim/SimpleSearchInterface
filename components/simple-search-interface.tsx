@@ -52,8 +52,10 @@ export default function SimpleSearchInterface() {
   const [lastSearchTime, setLastSearchTime] = useState<number | null>(null);
 
   const debouncedQuery = useDebounce(query, 300);
-  const userRole = session?.user?.role || "EMPLOYEE";
-  const userLevel = session?.user?.roleLevel || 1;
+  const user = session?.user as any;
+  const userRole = user?.role || "EMPLOYEE";
+  const userDivision = user?.division;
+  const userLevel = userRole === "CENADI_DIRECTOR" ? 4 : userRole === "DIVISION_DIRECTOR" ? 3 : 1;
 
   // Effectuer la recherche
   const handleSearch = async (searchQuery: string) => {
@@ -89,9 +91,8 @@ export default function SimpleSearchInterface() {
 
       toast({
         title: "Recherche terminée",
-        description: `${totalResultsData} résultat${
-          totalResultsData > 1 ? "s" : ""
-        } trouvé${totalResultsData > 1 ? "s" : ""} en ${responseTime}ms`,
+        description: `${totalResultsData} résultat${totalResultsData > 1 ? "s" : ""
+          } trouvé${totalResultsData > 1 ? "s" : ""} en ${responseTime}ms`,
         duration: 2000,
       });
     } catch (error) {
@@ -110,7 +111,7 @@ export default function SimpleSearchInterface() {
   // Fonctionnalités spéciales selon le rôle
   const getRoleSpecialFeatures = () => {
     switch (userRole) {
-      case "ADMIN":
+      case "CENADI_DIRECTOR":
         return {
           showAnalytics: true,
           showUserManagement: true,
@@ -118,7 +119,7 @@ export default function SimpleSearchInterface() {
           showAdvancedFilters: true,
           canExport: true,
         };
-      case "DIRECTOR":
+      case "DIVISION_DIRECTOR":
         return {
           showAnalytics: true,
           showUserManagement: false,
@@ -126,12 +127,12 @@ export default function SimpleSearchInterface() {
           showAdvancedFilters: true,
           canExport: true,
         };
-      case "MANAGER":
+      case "DIVISION_SECRETARY":
         return {
-          showAnalytics: true,
+          showAnalytics: false,
           showUserManagement: false,
           showSystemSettings: false,
-          showAdvancedFilters: true,
+          showAdvancedFilters: false,
           canExport: false,
         };
       default: // EMPLOYEE
@@ -171,9 +172,8 @@ export default function SimpleSearchInterface() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `search-export-${currentSearchQuery}-${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    a.download = `search-export-${currentSearchQuery}-${new Date().toISOString().split("T")[0]
+      }.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -187,22 +187,20 @@ export default function SimpleSearchInterface() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 dark:from-slate-900 dark:to-slate-800">
       {/* Header simplifié */}
       <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <img
-                src="/Logo_DGI_Cameroun.png"
-                alt="Logo DGI Cameroun"
-                className="w-10 h-10 object-contain"
-              />
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
+                C
+              </div>
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                Système de Recherche DGI
+                Système de Recherche CENADI
               </h1>
               <Badge variant="outline" className="text-xs">
-                {session?.user?.role}
+                {userRole.replace("_", " ")} {userDivision ? `- ${userDivision}` : ""}
               </Badge>
             </div>
 
@@ -219,7 +217,7 @@ export default function SimpleSearchInterface() {
                     <SheetHeader>
                       <SheetTitle>Options avancées</SheetTitle>
                       <SheetDescription>
-                        Fonctionnalités spéciales pour {session?.user?.role}
+                        Fonctionnalités spéciales pour {userRole}
                       </SheetDescription>
                     </SheetHeader>
                     <div className="mt-6 space-y-4">
@@ -359,11 +357,9 @@ export default function SimpleSearchInterface() {
                       onUploadComplete={(files) => {
                         toast({
                           title: "Documents ajoutés !",
-                          description: `${files.length} fichier${
-                            files.length > 1 ? "s" : ""
-                          } ajouté${
-                            files.length > 1 ? "s" : ""
-                          } avec succès. Ils seront indexés et disponibles pour la recherche sous peu.`,
+                          description: `${files.length} fichier${files.length > 1 ? "s" : ""
+                            } ajouté${files.length > 1 ? "s" : ""
+                            } avec succès. Ils seront indexés et disponibles pour la recherche sous peu.`,
                           duration: 5000,
                         });
                       }}
@@ -374,11 +370,11 @@ export default function SimpleSearchInterface() {
 
                   {/* Info sur les types de fichiers acceptés */}
                   <div className="max-w-2xl mx-auto">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                      <h3 className="font-medium text-green-900 dark:text-green-100 mb-2">
                         Types de fichiers supportés
                       </h3>
-                      <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
                         <p>
                           • <strong>Documents :</strong> PDF, DOC, DOCX, RTF,
                           ODT
@@ -423,7 +419,7 @@ export default function SimpleSearchInterface() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                    <FileText className="w-5 h-5 mr-2 text-primary" />
                     Résultats pour "{currentSearchQuery}"
                   </CardTitle>
                   {features.canExport && (

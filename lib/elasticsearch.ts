@@ -131,8 +131,26 @@ export function buildElasticsearchQuery(
   query: string,
   filters: SearchFiltersType,
   size = 20,
-  from = 0
+  from = 0,
+  division?: string,
+  role?: string
 ) {
+  // Filtre de division (RBAC basé sur le chemin)
+  // Si l'utilisateur n'est pas le Directeur Général de CENADI, on restreint à son dossier
+  const pathFilter = (() => {
+    if (!role || role === "CENADI_DIRECTOR") return null;
+
+    // Si l'utilisateur a une division (ex: DEL), on filtre par le chemin contenant /DEL/
+    if (division) {
+      return {
+        wildcard: {
+          "path.real": `*/${division}/*`
+        }
+      };
+    }
+
+    return null;
+  })();
   // Filtre de date
   const dateFilter = (() => {
     if (filters.date === "all") return null;
@@ -169,6 +187,7 @@ export function buildElasticsearchQuery(
   const filterClauses = [
     ...(dateFilter ? [dateFilter] : []),
     ...(typeFilter ? [typeFilter] : []),
+    ...(pathFilter ? [pathFilter] : []),
   ];
 
   // Construire la requête
@@ -257,17 +276,23 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
       (source.content ? extractSnippet(source.content, query) : "Aucune description disponible");
 
     // Déterminer le type de fichier
-    const fileType =
-      source.type ||
-      source.file?.content_type ||
-      source.meta?.format ||
-      (source.file_type?.includes("image")
-        ? "image"
-        : source.file_type?.includes("video")
-          ? "video"
-          : source.file_type?.includes("pdf") || source.file?.extension === "pdf"
-            ? "document"
-            : "article");
+    let fileType = "document";
+    const extension = (source.file?.extension ||
+      (source.file_name || "").split('.').pop()?.toLowerCase() || "").toLowerCase();
+
+    if ((source.file_type && source.file_type.includes("image")) || ["jpg", "jpeg", "png", "gif", "webp"].includes(extension)) {
+      fileType = "image";
+    } else if (source.file_type && source.file_type.includes("video")) {
+      fileType = "video";
+    } else if (["pptx", "ppt"].includes(extension)) {
+      fileType = "powerpoint";
+    } else if (["docx", "doc"].includes(extension)) {
+      fileType = "word";
+    } else if (["xlsx", "xls"].includes(extension)) {
+      fileType = "excel";
+    } else if (extension === "pdf") {
+      fileType = "pdf";
+    }
 
     // Déterminer la date
     const date =
@@ -288,12 +313,17 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
     // Générer une URL HTTP valide pour les PDFs
     let documentUrl = source.url || source.file?.url || `#${result._id}`;
 
-    // Si c'est un PDF avec un chemin file:// ou un chemin local, créer une URL API
-    if (
-      filePath &&
-      (source.file?.extension === "pdf" ||
-        source.file_name?.toLowerCase().endsWith(".pdf"))
-    ) {
+    // Extensions de fichiers supportées pour la visualisation via l'API
+    const supportedExtensions = [".pdf", ".pptx", ".ppt", ".docx", ".doc", ".xlsx", ".xls"];
+    const fileExtension = source.file?.extension ? `.${source.file.extension}` : "";
+    const fileNameLower = (source.file_name || source.file?.filename || "").toLowerCase();
+
+    const isSupportedDocument =
+      supportedExtensions.some(ext => fileNameLower.endsWith(ext)) ||
+      (fileExtension && supportedExtensions.includes(fileExtension.toLowerCase()));
+
+    // Si c'est un document supporté avec un chemin local, créer une URL API
+    if (filePath && isSupportedDocument) {
       // Extraire le chemin relatif du fichier
       let relativePath = filePath;
 
@@ -303,9 +333,17 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
       }
 
       // Convertir le chemin absolu en chemin relatif par rapport au répertoire de base
-      const baseDirectory = process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
-      if (relativePath.startsWith(baseDirectory)) {
+      const baseDirectory = process.env.UPLOAD_DIRECTORY || process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
+
+      // Handle Windows vs Linux paths in base directory
+      const normalizedBase = baseDirectory.replace(/\\/g, "/");
+      const normalizedPath = relativePath.replace(/\\/g, "/");
+
+      if (normalizedPath.startsWith(normalizedBase)) {
         relativePath = relativePath.substring(baseDirectory.length);
+      } else {
+        // Fallback: try to see if it's already a relative path or something else
+        // We'll keep it as is and let the API route handle the finding
       }
 
       // Ensure no leading slash
@@ -315,12 +353,12 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
 
       // Encoder le chemin pour l'URL
       const encodedPath = relativePath
-        .split("/")
+        .split(/[/\\]/)
         .map(encodeURIComponent)
         .join("/");
       documentUrl = `/api/pdf/${encodedPath}`;
 
-      console.log("🔄 PDF URL transformée:", {
+      console.log("🔄 Document URL transformée:", {
         original: filePath,
         baseDirectory: baseDirectory,
         relativePath: relativePath,
@@ -338,7 +376,7 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
       title: result.highlight?.title?.[0] || source.title,
       description: description,
       url: documentUrl,
-      type: "Document",
+      type: fileType,
       date: date,
       imageUrl: imageUrl,
       filePath: filePath,

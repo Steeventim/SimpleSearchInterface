@@ -78,19 +78,28 @@ export function SimplePdfViewer({
     ];
 
     let relativePath = filePath;
+    let foundBase = false;
     for (const basePath of basePaths) {
       if (filePath.startsWith(basePath)) {
         relativePath = filePath.substring(basePath.length);
         if (relativePath.startsWith("/")) {
           relativePath = relativePath.substring(1);
         }
+        foundBase = true;
         break;
       }
     }
 
+    // Si aucun répertoire de base connu n'est trouvé et que c'est un chemin absolu,
+    // n'utiliser que le nom du fichier comme dernier recours
+    if (!foundBase && (filePath.startsWith("/") || filePath.includes(":/"))) {
+      relativePath = filePath.split(/[/\\]/).pop() || filePath;
+    }
+
     const encodedPath = relativePath
-      .split("/")
+      .split(/[/\\]/)
       .map(encodeURIComponent)
+      .filter(Boolean)
       .join("/");
     return `/api/pdf/${encodedPath}`;
   };
@@ -100,28 +109,39 @@ export function SimplePdfViewer({
     try {
       setLoading(true);
       const numPages = pdf.numPages;
-      const searchTermLower = searchTerm.toLowerCase();
       const contentPages: number[] = [];
       let bestContentPage = 1;
       let maxRelevanceScore = 0;
+
+      // Préparer une regex robuste pour le terme de recherche
+      // Elle autorise n'importe quel caractère spécial ou espace entre les mots
+      const searchWords = searchTerm.trim().split(/\s+/).filter(w => w.length > 0);
+      const fuzzySearchRegex = new RegExp(
+        searchWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('(?:[^\\w\\s]*[\\s\u00a0]+[^\\w\\s]*|[^\\w\\s]+)'),
+        "gi"
+      );
+
+      console.log("🔍 Regex de recherche PDF:", fuzzySearchRegex);
 
       // Analyser toutes les pages
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
+
+        // Normaliser le texte de la page (espaces insécables, etc.)
         const pageText = textContent.items
           .map((item: any) => item.str)
           .join(" ")
-          .toLowerCase();
+          .normalize("NFC")
+          .replace(/\u00a0/g, " ");
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+        const matches = (pageText.match(fuzzySearchRegex) || []).length;
 
         if (matches > 0) {
           contentPages.push(pageNum);
-          const relevanceScore =
-            matches + (pageText.includes(searchTermLower) ? 10 : 0);
+          // Score de pertinence basé sur le nombre de correspondances
+          const relevanceScore = matches;
           if (relevanceScore > maxRelevanceScore) {
             maxRelevanceScore = relevanceScore;
             bestContentPage = pageNum;
@@ -179,11 +199,10 @@ export function SimplePdfViewer({
         const pageText = textContent.items
           .map((item: any) => item.str)
           .join(" ")
-          .toLowerCase();
+          .normalize("NFC")
+          .replace(/\u00a0/g, " ");
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+        const matches = (pageText.match(fuzzySearchRegex) || []).length;
 
         renderedPartitions.push({
           pageNumber: pageNum,

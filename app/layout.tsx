@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 // import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth-provider";
 import { initUploadDirectory } from "@/lib/init-upload-dir";
 
 // Initialiser le répertoire d'upload au démarrage du serveur
@@ -34,7 +35,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

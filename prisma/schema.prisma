@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CENADI_DIRECTOR
+  DIVISION_DIRECTOR
+  DIVISION_SECRETARY
+}
+
+enum Division {
+  DEP
+  DEL
+  DTB
+  DIRE
+  DAAF
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      Role     @default(DIVISION_SECRETARY)
+  division  Division?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

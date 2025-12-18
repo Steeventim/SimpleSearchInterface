@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { indexFile } from "@/lib/file-indexer";
 
 // Configuration pour le répertoire d'upload
@@ -33,13 +35,15 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
 
-    // Récupérer le répertoire de destination personnalisé s'il existe
-    const customDir = (formData.get("directory") as string) || "";
+    // Obtenir la session pour le RBAC
+    const session = await getServerSession(authOptions);
+    const userDivision = (session?.user as any)?.division || "general";
 
-    // Construire le chemin complet du répertoire
+    // Construire le chemin complet du répertoire (cenadi/DIVISION)
+    const divisionSubDir = path.join("cenadi", userDivision);
     const uploadDir = path.join(
       uploadConfig.baseDir,
-      customDir.replace(/\.\./g, "") // Empêcher la traversée de répertoire
+      divisionSubDir
     );
 
     // Créer le répertoire s'il n'existe pas
@@ -108,7 +112,7 @@ export async function POST(request: Request) {
             name: file.name,
             size: file.size,
             type: file.type,
-            directory: customDir,
+            directory: divisionSubDir,
           });
         } catch (indexError) {
           console.error(
