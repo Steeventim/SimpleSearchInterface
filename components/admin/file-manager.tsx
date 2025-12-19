@@ -15,7 +15,7 @@ import {
 import { Trash2, Search, Download, RefreshCw, FolderPlus } from "lucide-react";
 import { DirectorySelector } from "@/components/directory-selector";
 import { FilePreview } from "@/components/file-preview";
-import { removeFileFromIndex } from "@/lib/file-indexer";
+import { removeFileFromIndex } from "@/lib/file-indexer-client";
 import { Alert, AlertDescription, AlertCircle } from "@/components/ui/alert";
 
 interface FileInfo {

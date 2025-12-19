@@ -6,8 +6,10 @@ import { SearchFilters } from "@/components/search-filters";
 import { SearchResults } from "@/components/search-results";
 import { SearchHistory } from "@/components/search-history";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserInfo } from "@/components/user-info";
 import { FileUpload } from "@/components/file-upload";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +67,11 @@ export type SearchFiltersType = {
   sort?: "relevance" | "date";
 };
 
-export default function SearchInterface() {
+interface SearchInterfaceProps {
+  userDivision?: string;
+}
+
+export default function SearchInterface(props: SearchInterfaceProps) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -80,10 +86,10 @@ export default function SearchInterface() {
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false); // Specific for suggestion fetching
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [totalResults, setTotalResults] = useState(0);
   const [currentSearchQuery, setCurrentSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const debouncedQuery = useDebounce(query, 300);
 
@@ -206,41 +212,11 @@ export default function SearchInterface() {
   };
 
   const handleFileUploadComplete = (files: File[]) => {
-    setUploadedFiles(files);
-
-    // Déclencher une recherche basée sur les fichiers uploadés
-    setIsLoading(true);
-    setSearchError(null);
-
-    // Simuler un appel à l'API pour indexer et rechercher dans les fichiers
-    setTimeout(() => {
-      // Dans une implémentation réelle, on appellerait l'API Elasticsearch ici
-      const fileResults: SearchResult[] = files.map((file, i) => ({
-        id: `file-${i}`,
-        title: `Analyse de "${file.name}"`,
-        description: `Résultats d'analyse pour le fichier "${file.name}" (${(
-          file.size / 1024
-        ).toFixed(
-          2
-        )} KB). Ce fichier contient des informations pertinentes pour votre recherche.`,
-        url: `#file-${i}`,
-        type: file.type.includes("image")
-          ? "image"
-          : file.type.includes("video")
-            ? "video"
-            : "document",
-        date: new Date().toISOString(),
-        imageUrl: file.type.includes("image")
-          ? URL.createObjectURL(file)
-          : undefined,
-        fileName: file.name,
-        fileSize: file.size,
-      }));
-
-      setResults(fileResults);
-      setTotalResults(fileResults.length);
-      setIsLoading(false);
-    }, 1500);
+    toast({
+      title: "Documents ajoutés !",
+      description: `${files.length} document${files.length > 1 ? "s" : ""} avec succès. Ils seront indexés sous peu.`,
+      duration: 5000,
+    });
   };
 
   return (
@@ -265,12 +241,13 @@ export default function SearchInterface() {
                 onUploadComplete={handleFileUploadComplete}
                 maxFiles={5}
                 acceptedFileTypes=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                userDivision={props.userDivision}
               />
             </DialogContent>
           </Dialog>
 
-          {/* Lien vers la bibliothèque de recherche */}
-          <Link href="/admin/search-library">
+          {/* Lien vers la bibliothèque (Documents de la division) */}
+          <Link href="/documents">
             <Button variant="outline" size="sm" suppressHydrationWarning>
               <Database className="h-4 w-4 mr-2" />
               Bibliothèque
@@ -279,6 +256,7 @@ export default function SearchInterface() {
         </div>
 
         <div className="flex items-center gap-2">
+          <UserInfo />
           <ThemeToggle />
         </div>
       </div>
@@ -349,19 +327,6 @@ export default function SearchInterface() {
           </Alert>
         )}
 
-        {uploadedFiles.length > 0 && (
-          <div className="mt-4 p-3 bg-primary/10 rounded-md">
-            <p className="text-sm font-medium">
-              {uploadedFiles.length} fichier
-              {uploadedFiles.length > 1 ? "s" : ""} analysé
-              {uploadedFiles.length > 1 ? "s" : ""}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Les résultats de recherche sont basés sur l'analyse de vos
-              fichiers
-            </p>
-          </div>
-        )}
 
         {results.length > 0 && (
           <>

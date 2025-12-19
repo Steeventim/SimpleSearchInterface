@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ Documents récupérés:", {
       total: result.total,
-      results: result.results.length,
+      results: result.documents.length,
     });
 
     return NextResponse.json(result);

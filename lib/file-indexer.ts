@@ -1,3 +1,6 @@
+import fs from "fs/promises";
+import { getElasticsearchClient, elasticsearchConfig } from "@/lib/elasticsearch";
+
 // Types de fichiers supportés pour l'extraction de contenu
 const SUPPORTED_TEXT_TYPES = [
   "text/plain",
@@ -16,6 +19,7 @@ export async function indexFile(fileInfo: {
   size: number;
   type: string;
   directory?: string;
+  userId: string;
 }) {
   try {
     // Préparer le document pour Elasticsearch
@@ -32,31 +36,38 @@ export async function indexFile(fileInfo: {
       type: fileInfo.type.includes("image")
         ? "image"
         : fileInfo.type.includes("video")
-        ? "video"
-        : fileInfo.type.includes("pdf") || fileInfo.type.includes("document")
-        ? "document"
-        : "article",
+          ? "video"
+          : fileInfo.type.includes("pdf") || fileInfo.type.includes("document")
+            ? "document"
+            : "article",
       date: new Date().toISOString(),
       directory: fileInfo.directory || "",
       // Champ pour les suggestions
       suggest: [fileInfo.name],
+      user_id: fileInfo.userId, // Ajout de l'ID utilisateur
     };
 
-    // Indexer dans Elasticsearch via une API route
-    const response = await fetch("/api/index-file", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(document),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Erreur Elasticsearch: ${error}`);
+    // Extraire le contenu si possible
+    if (
+      fileInfo.path &&
+      SUPPORTED_TEXT_TYPES.some((type) => fileInfo.type.includes(type))
+    ) {
+      try {
+        const content = await fs.readFile(fileInfo.path, "utf-8");
+        document.content = content;
+      } catch (error) {
+        console.error(`Erreur lors de l'extraction du contenu: ${error}`);
+      }
     }
 
-    const result = await response.json();
+    // Indexer directement dans Elasticsearch
+    const client = await getElasticsearchClient();
+    const result = await client.index({
+      index: elasticsearchConfig.index,
+      document: document,
+      refresh: true, // Pour que ce soit disponible immédiatement
+    });
+
     return result;
   } catch (error) {
     console.error(`Erreur lors de l'indexation du fichier: ${error}`);
@@ -64,30 +75,3 @@ export async function indexFile(fileInfo: {
   }
 }
 
-// Fonction pour supprimer un fichier de l'index
-export async function removeFileFromIndex(fileName: string) {
-  try {
-    // Appeler l'API pour supprimer le fichier de l'index
-    const response = await fetch("/api/remove-file-index", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ fileName }),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Erreur lors de la suppression du fichier de l'index: ${await response.text()}`
-      );
-    }
-
-    const result = await response.json();
-    return result.success;
-  } catch (error) {
-    console.error(
-      `Erreur lors de la suppression du fichier de l'index: ${error}`
-    );
-    throw error;
-  }
-}

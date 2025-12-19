@@ -365,6 +365,7 @@ export default function SimpleSearchInterface() {
                       }}
                       maxFiles={10}
                       acceptedFileTypes=".pdf,.doc,.docx,.txt,.rtf,.odt"
+                      userDivision={userDivision}
                     />
                   </div>
 

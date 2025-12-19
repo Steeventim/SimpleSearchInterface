@@ -1,8 +1,8 @@
 ---
 name: "cenadi_job"
 fs:
-  url: "/tmp/fscrawler/data"
-  update_rate: "15m"
+  url: "/Users/laure/Desktop/Doc1"
+  update_rate: "5m"
   excludes:
   - "*/~*"
   json_support: false
@@ -29,7 +29,7 @@ elasticsearch:
   username: ""
   password: ""
   ssl_verification: false
-  index: "cenadi_documents"
+  index: "cenadi_document1"
   bulk_size: 100
   flush_interval: "5s"
   byte_size: "10mb"

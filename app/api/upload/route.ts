@@ -113,6 +113,7 @@ export async function POST(request: Request) {
             size: file.size,
             type: file.type,
             directory: divisionSubDir,
+            userId: (session?.user as any)?.id || "unknown",
           });
         } catch (indexError) {
           console.error(

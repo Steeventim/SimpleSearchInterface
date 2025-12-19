@@ -88,7 +88,7 @@ services:
     image: dadoonet/fscrawler:2.10-SNAPSHOT
     container_name: cenadi-fscrawler
     volumes:
-      - ${UPLOAD_DIRECTORY}:/tmp/fscrawler/data:ro
+      - "${UPLOAD_DIRECTORY}:/Users/laure/Desktop/Doc1:ro"
       - ./docker/fscrawler/config:/root/.fscrawler
       - ./docker/fscrawler/logs:/usr/share/fscrawler/logs
     environment:

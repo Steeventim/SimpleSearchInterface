@@ -15,9 +15,10 @@ interface FileUploadProps {
   onUploadComplete?: (files: File[]) => void
   maxFiles?: number
   acceptedFileTypes?: string
+  userDivision?: string
 }
 
-export function FileUpload({ onUploadComplete, maxFiles = 5, acceptedFileTypes }: FileUploadProps) {
+export function FileUpload({ onUploadComplete, maxFiles = 5, acceptedFileTypes, userDivision }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -146,7 +147,7 @@ export function FileUpload({ onUploadComplete, maxFiles = 5, acceptedFileTypes }
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <DirectorySelector value={directory} onChange={setDirectory} />
+        <DirectorySelector value={directory} onChange={setDirectory} userDivision={userDivision} />
         <p className="text-sm text-muted-foreground">
           {directory ? `Les fichiers seront uploadés dans: ${directory}` : "Répertoire par défaut"}
         </p>
