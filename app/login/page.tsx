@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, Loader2 } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Lock, Mail, ArrowRight } from "lucide-react";
+import { Lock, Mail, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -21,6 +21,7 @@ export default function LoginPage() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -109,14 +110,25 @@ export default function LoginPage() {
                                     <Lock className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
                                     <Input
                                         id="password"
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="pl-10 h-11 bg-slate-50 border-slate-200 focus:bg-white transition-all duration-200 dark:bg-slate-950/50 dark:border-slate-800"
+                                        className="pl-10 pr-10 h-11 bg-slate-50 border-slate-200 focus:bg-white transition-all duration-200 dark:bg-slate-950/50 dark:border-slate-800"
                                         suppressHydrationWarning
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                    </button>
                                 </div>
                             </div>
                         </div>

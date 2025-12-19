@@ -35935,3 +35935,4 @@ com.jayway.jsonpath.InvalidPathException: Could not find matching close quote fo
 10:13:54,801 [33mWARN [m [f.p.e.c.f.t.TikaDocParser] Failed to extract [-1] characters of text for [/Users/laure/Desktop/Doc1/Circular_No_001_of_23_relating_to_the_preparation_of_the_State_budget.pdf]: Unable to extract PDF content -> Unable to end a page -> TesseractOCRParser timeout
 10:16:28,206 [33mWARN [m [o.a.p.p.COSParser] Object (204:0) at offset 1663920 does not end with 'endobj' but with 'streqm'
 10:16:29,090 [33mWARN [m [o.a.p.f.FlateFilterDecoderStream] FlateFilter: premature end of stream due to a DataFormatException = invalid distance too far back
+10:27:41,788 [33mWARN [m [o.a.p.p.COSParser] The end of the stream doesn't point to the correct offset, using workaround to read the stream, stream start position: 1605532, length: 58288, expected end position: 1663820

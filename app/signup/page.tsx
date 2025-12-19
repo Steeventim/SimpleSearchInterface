@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Loader2, ArrowLeft } from "lucide-react";
+import { Search, Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { Division, DivisionNames } from "@/lib/user-roles";
 
@@ -18,6 +18,7 @@ export default function SignupPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [division, setDivision] = useState<string>("");
     const [role, setRole] = useState<string>("DIVISION_SECRETARY");
     const [error, setError] = useState("");
@@ -139,14 +140,27 @@ export default function SignupPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="password">Mot de passe</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    className="focus-visible:ring-primary"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className="focus-visible:ring-primary pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4">
