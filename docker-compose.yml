@@ -65,7 +65,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:mkounga10@db:5432/cenadi_search
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - ELASTICSEARCH_INDEX=cenadi_documents
+      - ELASTICSEARCH_INDEX=cenadi_document1
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - UPLOAD_DIRECTORY=/app/uploads

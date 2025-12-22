@@ -21,7 +21,7 @@ export async function getUserDocuments(
 ) {
   try {
     const result = await client.search({
-      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
+      index: process.env.ELASTICSEARCH_INDEX || "cenadi_document1",
       query: {
         term: {
           "user_id.keyword": userId,
@@ -47,7 +47,7 @@ export async function deleteUserDocument(userId: string, documentId: string) {
   try {
     // Vérifier que le document appartient à l'utilisateur
     const doc = await client.get({
-      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
+      index: process.env.ELASTICSEARCH_INDEX || "cenadi_document1",
       id: documentId,
     });
 
@@ -58,7 +58,7 @@ export async function deleteUserDocument(userId: string, documentId: string) {
 
     // Supprimer le document
     await client.delete({
-      index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
+      index: process.env.ELASTICSEARCH_INDEX || "cenadi_document1",
       id: documentId,
     });
 
@@ -118,7 +118,7 @@ export interface ElasticsearchResult {
 // Configuration Elasticsearch
 export const elasticsearchConfig = {
   node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
-  index: process.env.ELASTICSEARCH_INDEX || "toptop_v3",
+  index: process.env.ELASTICSEARCH_INDEX || "cenadi_document1",
   // Authentification optionnelle
   auth: {
     username: process.env.ELASTICSEARCH_USERNAME || "",
