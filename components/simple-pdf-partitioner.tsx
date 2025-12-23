@@ -21,6 +21,7 @@ import {
 import { usePdfjs } from "@/lib/pdf-utils";
 
 interface PartitionedPage {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   pageNumber: number;
   canvas: HTMLCanvasElement;
   hasSearchTerm: boolean;
@@ -67,6 +68,14 @@ export function SimplePdfPartitioner({
     let filePath = url.replace("file://", "");
     filePath = decodeURIComponent(filePath);
 
+    // This logic relies on the server's recursive search, so we extract just the filename
+    // or use relative path if known. But server accepts filename only for robust search.
+    // However, the existing logic tries to strip base paths.
+
+    // Simplification based on previous conversation:
+    // Extract filename if needed, or keep relative path logic if it works.
+    // The previous fix used "Doc1" path.
+
     const basePaths = [
       "/home/tims/Documents/",
       "/home/tims/Documents",
@@ -97,11 +106,26 @@ export function SimplePdfPartitioner({
   };
 
   // Analyser le PDF
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const analyzePdfAndCreatePartitions = async (pdf: any) => {
     try {
       setLoading(true);
       const numPages = pdf.numPages;
       const searchTermLower = searchTerm.toLowerCase();
+
+      // Escape special characters for regex
+      const escapeRegExp = (string: string) => {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+
+      // Create a flexible regex that matches the search term with variable whitespace
+      const safeSearchTerm = escapeRegExp(searchTermLower);
+      // Replace spaces with \s+ to match newlines or multiple spaces
+      const flexibleRegex = new RegExp(safeSearchTerm.replace(/\s+/g, '\\s+'), 'gi');
+
+      // Tokens for highlighting (split by whitespace)
+      const searchTokens = searchTermLower.split(/\s+/).filter(t => t.length > 0);
+
       const contentPages: number[] = [];
       let bestContentPage = 1;
       let maxRelevanceScore = 0;
@@ -111,13 +135,13 @@ export function SimplePdfPartitioner({
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
           .map((item: any) => item.str)
           .join(" ")
           .toLowerCase();
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+        // Use flexible regex for matching
+        const matches = (pageText.match(flexibleRegex) || []).length;
 
         if (matches > 0) {
           contentPages.push(pageNum);
@@ -139,27 +163,25 @@ export function SimplePdfPartitioner({
       if (numPages === 1) {
         pagesToRender.push({ pageNum: 1, type: "first" });
       } else {
-        // Première page
-        pagesToRender.push({
-          pageNum: 1,
-          type: contentPages.includes(1) ? "content" : "first",
+        // Initialize with unique pages
+        const uniquePages = new Set<number>();
+        uniquePages.add(1); // Always first page
+        if (numPages > 1) uniquePages.add(numPages); // Always last page if exists
+
+        // Add all pages with search matches
+        contentPages.forEach((p) => uniquePages.add(p));
+
+        const sortedPages = Array.from(uniquePages).sort((a, b) => a - b);
+
+        sortedPages.forEach((pageNum) => {
+          let type: "first" | "content" | "last" = "content";
+          if (pageNum === 1)
+            type = contentPages.includes(1) ? "content" : "first";
+          else if (pageNum === numPages)
+            type = contentPages.includes(numPages) ? "content" : "last";
+
+          pagesToRender.push({ pageNum, type });
         });
-
-        // Meilleure page de contenu (si différente de la première et dernière)
-        if (bestContentPage !== 1 && bestContentPage !== numPages) {
-          pagesToRender.push({ pageNum: bestContentPage, type: "content" });
-        }
-
-        // Dernière page (si différente de la première)
-        if (
-          numPages > 1 &&
-          !pagesToRender.some((p) => p.pageNum === numPages)
-        ) {
-          pagesToRender.push({
-            pageNum: numPages,
-            type: contentPages.includes(numPages) ? "content" : "last",
-          });
-        }
       }
 
       // Rendre les pages
@@ -177,14 +199,52 @@ export function SimplePdfPartitioner({
         await page.render({ canvasContext: context, viewport }).promise;
 
         const textContent = await page.getTextContent();
+
+        // Highlight search terms
+        if (searchTerm && context) {
+          context.fillStyle = "rgba(255, 255, 0, 0.5)"; // Yellow highlight
+
+          // Helper for matrix multiplication
+          const multiplyTransform = (m1: number[], m2: number[]) => {
+            return [
+              m1[0] * m2[0] + m1[2] * m2[1],
+              m1[1] * m2[0] + m1[3] * m2[1],
+              m1[0] * m2[2] + m1[2] * m2[3],
+              m1[1] * m2[2] + m1[3] * m2[3],
+              m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+              m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
+            ];
+          };
+
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          textContent.items.forEach((item: any) => {
+            const str = item.str.toLowerCase();
+
+            // Check if ANY token matches
+            const hasMatch = searchTokens.some(token => str.includes(token));
+
+            if (hasMatch) {
+              // Get the transformation matrix for the text item
+              const tx = multiplyTransform(viewport.transform, item.transform);
+
+              // Approximate width and height based on the transformed vector
+              const fontHeight = Math.hypot(tx[2], tx[3]);
+              const width = item.width * viewport.scale;
+
+              // Draw highlight
+              // tx[4], tx[5] is the origin (baseline), so we draw up by height
+              context.fillRect(tx[4], tx[5] - fontHeight, width, fontHeight);
+            }
+          });
+        }
+
         const pageText = textContent.items
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
           .map((item: any) => item.str)
           .join(" ")
           .toLowerCase();
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+        const matches = (pageText.match(flexibleRegex) || []).length;
 
         renderedPartitions.push({
           pageNumber: pageNum,
@@ -221,7 +281,10 @@ export function SimplePdfPartitioner({
         setError(null);
 
         const validUrl = transformFileUrlToApiUrl(documentUrl);
-        const pdf = await pdfjs.getDocument(validUrl).promise;
+        const pdf = await pdfjs.getDocument({
+          url: validUrl,
+          withCredentials: true,
+        }).promise;
 
         if (searchTerm) {
           await analyzePdfAndCreatePartitions(pdf);
@@ -347,8 +410,8 @@ export function SimplePdfPartitioner({
                       key={index}
                       onClick={() => setCurrentPartition(index)}
                       className={`px-3 py-1 rounded text-sm transition-all ${index === currentPartition
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-600 hover:bg-gray-200"
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-600 hover:bg-gray-200"
                         }`}
                     >
                       Page {partition.pageNumber}

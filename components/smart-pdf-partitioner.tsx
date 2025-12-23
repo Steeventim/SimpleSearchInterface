@@ -137,30 +137,54 @@ export function SmartPdfPartitioner({
 
       console.log(`🔍 Analyse du PDF: ${numPages} pages pour "${searchTerm}"`);
 
+      // Escape special characters for regex
+      const escapeRegExp = (string: string) => {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      };
+
+      // Create a flexible regex that matches the search term with variable whitespace
+      const safeSearchTerm = escapeRegExp(searchTermLower);
+      // Replace spaces with \s+ to match newlines or multiple spaces
+      const flexibleRegex = new RegExp(safeSearchTerm.replace(/\s+/g, '\\s+'), 'gi');
+
+      // Tokens for highlighting (split by whitespace)
+      const searchTokens = searchTermLower.split(/\s+/).filter(t => t.length > 0);
+
       // 1. Analyser toutes les pages pour trouver le contenu
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ")
-          .toLowerCase();
+        try {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+          // Normalize text to handle accents/weird chars
+          const normalizeStr = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-        if (matches > 0) {
-          contentPages.push(pageNum);
+          const pageText = textContent.items
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            .map((item: any) => normalizeStr(item.str))
+            .join(" ");
 
-          // Calculer un score de pertinence
-          const relevanceScore =
-            matches + (pageText.includes(searchTermLower) ? 10 : 0);
+          const normalizedSearchTerm = normalizeStr(searchTerm);
+          const safeSearchTerm = escapeRegExp(normalizedSearchTerm);
+          const flexibleRegex = new RegExp(safeSearchTerm.replace(/\s+/g, '\\s+'), 'gi');
 
-          if (relevanceScore > maxRelevanceScore) {
-            maxRelevanceScore = relevanceScore;
-            bestContentPage = pageNum;
+          // Use flexible regex for matching
+          const matches = (pageText.match(flexibleRegex) || []).length;
+
+          if (matches > 0) {
+            contentPages.push(pageNum);
+
+            // Calculer un score de pertinence
+            const relevanceScore =
+              matches + (pageText.includes(normalizedSearchTerm) ? 10 : 0);
+
+            if (relevanceScore > maxRelevanceScore) {
+              maxRelevanceScore = relevanceScore;
+              bestContentPage = pageNum;
+            }
           }
+        } catch (err) {
+          console.error(`Error analyzing page ${pageNum}:`, err);
         }
       }
 
@@ -177,42 +201,25 @@ export function SmartPdfPartitioner({
       const hasLastPageContent = contentPages.includes(numPages);
 
       // Logique de partitionnement intelligent
-      if (numPages === 1) {
-        // Un seul page: afficher seulement cette page
-        pagesToRender.push({ pageNum: 1, type: "first" });
-      } else if (numPages === 2) {
-        // Deux pages: afficher les deux
-        pagesToRender.push({ pageNum: 1, type: "first" });
-        if (bestContentPage === 2 || contentPages.includes(2)) {
-          pagesToRender.push({ pageNum: 2, type: "content" });
-        } else {
-          pagesToRender.push({ pageNum: 2, type: "last" });
-        }
-      } else {
-        // Plus de 2 pages: logique complète
+      // Initialize with unique pages
+      const uniquePages = new Set<number>();
+      uniquePages.add(1); // Always first page
+      if (numPages > 1) uniquePages.add(numPages); // Always last page if exists
 
-        // Toujours inclure la première page
-        pagesToRender.push({
-          pageNum: 1,
-          type: hasFirstPageContent ? "content" : "first",
-        });
+      // Add all pages with search matches
+      contentPages.forEach((p) => uniquePages.add(p));
 
-        // Inclure la meilleure page de contenu (si différente de la première et dernière)
-        if (bestContentPage !== 1 && bestContentPage !== numPages) {
-          pagesToRender.push({ pageNum: bestContentPage, type: "content" });
-        }
+      const sortedPages = Array.from(uniquePages).sort((a, b) => a - b);
 
-        // Inclure la dernière page (si différente de la première et du contenu)
-        if (
-          numPages > 1 &&
-          !pagesToRender.some((p) => p.pageNum === numPages)
-        ) {
-          pagesToRender.push({
-            pageNum: numPages,
-            type: hasLastPageContent ? "content" : "last",
-          });
-        }
-      }
+      sortedPages.forEach((pageNum) => {
+        let type: "first" | "content" | "last" = "content";
+        if (pageNum === 1)
+          type = contentPages.includes(1) ? "content" : "first";
+        else if (pageNum === numPages)
+          type = contentPages.includes(numPages) ? "content" : "last";
+
+        pagesToRender.push({ pageNum, type });
+      });
 
       console.log(`📑 Pages sélectionnées:`, pagesToRender);
 
@@ -233,14 +240,52 @@ export function SmartPdfPartitioner({
 
         // Analyser le contenu de cette page
         const textContent = await page.getTextContent();
+
+        // Highlight search terms
+        if (searchTerm && context) {
+          context.fillStyle = "rgba(255, 230, 0, 0.6)"; // Stronger Yellow highlight
+
+          // Helper for matrix multiplication
+          const multiplyTransform = (m1: number[], m2: number[]) => {
+            return [
+              m1[0] * m2[0] + m1[2] * m2[1],
+              m1[1] * m2[0] + m1[3] * m2[1],
+              m1[0] * m2[2] + m1[2] * m2[3],
+              m1[1] * m2[2] + m1[3] * m2[3],
+              m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+              m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
+            ];
+          };
+
+          const normalizeStr = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const normalizedSearchTerm = normalizeStr(searchTerm);
+          const searchTokens = normalizedSearchTerm.split(/\s+/).filter(t => t.length > 0);
+
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          textContent.items.forEach((item: any) => {
+            const str = normalizeStr(item.str);
+
+            // Check if ANY token matches
+            const hasMatch = searchTokens.some(token => str.includes(token));
+
+            if (hasMatch) {
+              const tx = multiplyTransform(viewport.transform, item.transform);
+              const fontHeight = Math.hypot(tx[2], tx[3]);
+              const width = item.width * viewport.scale; // Width in canvas pixels
+
+              // Draw with slight padding
+              context.fillRect(tx[4], tx[5] - fontHeight, width + 2, fontHeight + 2);
+            }
+          });
+        }
+
         const pageText = textContent.items
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
           .map((item: any) => item.str)
           .join(" ")
           .toLowerCase();
 
-        const matches = (
-          pageText.match(new RegExp(searchTermLower, "gi")) || []
-        ).length;
+        const matches = (pageText.match(flexibleRegex) || []).length;
         const hasSearchTerm = matches > 0;
         const relevanceScore =
           matches + (pageText.includes(searchTermLower) ? 10 : 0);
@@ -290,7 +335,10 @@ export function SmartPdfPartitioner({
         const validUrl = transformFileUrlToApiUrl(documentUrl);
         console.log("📄 Chargement du PDF:", validUrl);
 
-        const pdf = await pdfjs.getDocument(validUrl).promise;
+        const pdf = await pdfjs.getDocument({
+          url: validUrl,
+          withCredentials: true,
+        }).promise;
         setPdfDocument(pdf);
 
         if (searchTerm) {
@@ -780,8 +828,8 @@ export function SmartPdfPartitioner({
                             key={index}
                             onClick={() => setCurrentPartition(index)}
                             className={`px-3 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-1 ${index === currentPartition
-                                ? "bg-white shadow-sm text-blue-600"
-                                : "text-gray-600 hover:text-gray-900"
+                              ? "bg-white shadow-sm text-blue-600"
+                              : "text-gray-600 hover:text-gray-900"
                               }`}
                           >
                             {getPageTypeIcon(partition.pageType)}
@@ -821,102 +869,34 @@ export function SmartPdfPartitioner({
                                     partitionedPages[currentPartition].canvas;
                                   canvas.width = sourceCanvas.width;
                                   canvas.height = sourceCanvas.height;
-                                  ctx?.drawImage(sourceCanvas, 0, 0);
+
+                                  // Apply zoom transformation
+                                  ctx?.scale(zoomLevel, zoomLevel);
+                                  // Note: we can't easily scale the canvas context *after* drawing the image if we want high res zoom
+                                  // Standard canvas zoom usually requires redrawing source at larger size
+                                  // BUT here sourceCanvas is fixed size (scale 1.5).
+                                  // To support zoom, we should ideally re-render the page at higher scale.
+                                  // For now, CSS transform or context scale is used.
+                                  // `drawImage` scales it.
+
+                                  // Logic improvement:
+                                  // Allow canvas to be larger
+                                  canvas.width = sourceCanvas.width * zoomLevel;
+                                  canvas.height = sourceCanvas.height * zoomLevel;
+                                  ctx?.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
                                 }
                               }}
-                              className="border border-gray-300 shadow-xl rounded-lg bg-white"
+                              className="shadow-2xl border border-gray-300 bg-white rounded-lg transition-transform duration-200"
+                              // Remove CSS scale if we handle it in canvas, OR keep CSS scale for smooth zoom without redraw
+                              // Let's use CSS width/height for display size:
                               style={{
-                                transform: `scale(${zoomLevel})`,
-                                transformOrigin: "center center",
-                                transition: "transform 0.2s ease-in-out",
+                                maxWidth: 'none',
+                                // transform: `scale(${zoomLevel})`, // If using CSS zoom
+                                // transformOrigin: 'top center'
                               }}
                             />
-
-                            {/* Indicateur de correspondances */}
-                            {partitionedPages[currentPartition]
-                              .hasSearchTerm && (
-                                <div
-                                  className="absolute top-2 right-2"
-                                  style={{
-                                    transform: `scale(${Math.max(
-                                      0.8 / zoomLevel,
-                                      0.6
-                                    )})`,
-                                    transformOrigin: "top right",
-                                  }}
-                                >
-                                  <Badge
-                                    variant="default"
-                                    className="shadow-lg bg-green-600 hover:bg-green-700"
-                                  >
-                                    <Search className="h-3 w-3 mr-1" />
-                                    {
-                                      partitionedPages[currentPartition]
-                                        .searchMatches
-                                    }{" "}
-                                    match
-                                    {partitionedPages[currentPartition]
-                                      .searchMatches > 1
-                                      ? "es"
-                                      : ""}
-                                  </Badge>
-                                </div>
-                              )}
-
-                            {/* Indicateur du type de page */}
-                            <div
-                              className="absolute top-2 left-2"
-                              style={{
-                                transform: `scale(${Math.max(
-                                  0.8 / zoomLevel,
-                                  0.6
-                                )})`,
-                                transformOrigin: "top left",
-                              }}
-                            >
-                              <Badge
-                                variant="secondary"
-                                className="shadow-lg bg-white/95 backdrop-blur-sm border"
-                              >
-                                {getPageTypeIcon(
-                                  partitionedPages[currentPartition].pageType
-                                )}
-                                <span className="ml-1">
-                                  {getPageTypeLabel(
-                                    partitionedPages[currentPartition].pageType
-                                  )}
-                                </span>
-                              </Badge>
-                            </div>
-
-                            {/* Numéro de page */}
-                            <div
-                              className="absolute bottom-2 left-2"
-                              style={{
-                                transform: `scale(${Math.max(
-                                  0.8 / zoomLevel,
-                                  0.6
-                                )})`,
-                                transformOrigin: "bottom left",
-                              }}
-                            >
-                              <Badge
-                                variant="outline"
-                                className="shadow-lg bg-white/95 backdrop-blur-sm"
-                              >
-                                Page{" "}
-                                {partitionedPages[currentPartition].pageNumber}
-                              </Badge>
-                            </div>
                           </div>
                         )}
-                      </div>
-
-                      {/* Instructions de zoom */}
-                      <div className="absolute bottom-4 right-4">
-                        <div className="bg-black/70 text-white text-xs px-2 py-1 rounded-md">
-                          Utilisez les contrôles de zoom ci-dessus
-                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -924,8 +904,6 @@ export function SmartPdfPartitioner({
               </div>
             </div>
           )}
-
-        <KeyboardShortcuts />
       </DialogContent>
     </Dialog>
   );

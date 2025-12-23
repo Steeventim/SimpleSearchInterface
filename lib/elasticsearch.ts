@@ -324,7 +324,8 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
 
     // Si c'est un document supporté avec un chemin local, créer une URL API
     if (filePath && isSupportedDocument) {
-      // Extraire le chemin relatif du fichier
+      // Approche simplifiée: extraire seulement le nom du fichier
+      // Le serveur API utilise une recherche récursive pour trouver le fichier
       let relativePath = filePath;
 
       // Nettoyer les URLs file://
@@ -332,36 +333,16 @@ export function transformElasticsearchResults(results: ElasticsearchResult[], qu
         relativePath = relativePath.replace("file://", "");
       }
 
-      // Convertir le chemin absolu en chemin relatif par rapport au répertoire de base
-      const baseDirectory = process.env.UPLOAD_DIRECTORY || process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
+      // Extraire seulement le nom du fichier (le serveur fera la recherche récursive)
+      const fileName = relativePath.split(/[/\\]/).pop() || relativePath;
 
-      // Handle Windows vs Linux paths in base directory
-      const normalizedBase = baseDirectory.replace(/\\/g, "/");
-      const normalizedPath = relativePath.replace(/\\/g, "/");
-
-      if (normalizedPath.startsWith(normalizedBase)) {
-        relativePath = relativePath.substring(baseDirectory.length);
-      } else {
-        // Fallback: try to see if it's already a relative path or something else
-        // We'll keep it as is and let the API route handle the finding
-      }
-
-      // Ensure no leading slash
-      if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-        relativePath = relativePath.substring(1);
-      }
-
-      // Encoder le chemin pour l'URL
-      const encodedPath = relativePath
-        .split(/[/\\]/)
-        .map(encodeURIComponent)
-        .join("/");
+      // Encoder le nom du fichier pour l'URL
+      const encodedPath = encodeURIComponent(fileName);
       documentUrl = `/api/pdf/${encodedPath}`;
 
       console.log("🔄 Document URL transformée:", {
         original: filePath,
-        baseDirectory: baseDirectory,
-        relativePath: relativePath,
+        fileName: fileName,
         transformed: documentUrl,
       });
     }
