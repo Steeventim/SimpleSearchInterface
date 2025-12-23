@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, FileText, Eye } from "lucide-react";
 import Image from "next/image";
 import { FallbackDocumentViewer } from "@/components/fallback-document-viewer";
-import { SimplePdfViewer } from "@/components/simple-pdf-viewer";
+import { SimplePdfPartitioner } from "@/components/simple-pdf-partitioner";
 import { PartitioningHelpDialog } from "@/components/partitioning-help-dialog";
 import { PdfComponentWrapper } from "@/components/pdf-component-wrapper";
 
@@ -297,7 +297,7 @@ export function SearchResults({
 
       {smartPartitionerDoc && (
         <PdfComponentWrapper isOpen={isSmartPartitionerOpen}>
-          <SimplePdfViewer
+          <SimplePdfPartitioner
             documentUrl={smartPartitionerDoc.url}
             searchTerm={smartPartitionerDoc.searchTerm}
             isOpen={isSmartPartitionerOpen}
