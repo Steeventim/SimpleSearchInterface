@@ -6,8 +6,11 @@ import util from "util";
 // Promisify fs functions
 const stat = util.promisify(fs.stat);
 
-// Répertoire de base pour les documents
-const UPLOAD_DIRECTORY = process.env.UPLOAD_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
+// Répertoire de base pour les documents (REQUIS)
+const UPLOAD_DIRECTORY = process.env.UPLOAD_DIRECTORY;
+if (!UPLOAD_DIRECTORY) {
+    console.error("❌ ERREUR: La variable d'environnement UPLOAD_DIRECTORY n'est pas définie.");
+}
 
 // Répertoire temporaire pour stocker les images de pages
 const TEMP_DIR = path.join(process.cwd(), "tmp");
@@ -59,6 +62,14 @@ function findFileRecursively(dir: string, filename: string): string | null {
 
 export async function GET(request: Request) {
     try {
+        // Vérifier que UPLOAD_DIRECTORY est défini
+        if (!UPLOAD_DIRECTORY) {
+            return NextResponse.json(
+                { error: "Configuration serveur incorrecte: UPLOAD_DIRECTORY non défini" },
+                { status: 500 }
+            );
+        }
+
         const { searchParams } = new URL(request.url);
         const filePath = searchParams.get("path");
         const searchTerm = searchParams.get("searchTerm") || "";

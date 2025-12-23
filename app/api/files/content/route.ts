@@ -8,8 +8,11 @@ const readFile = util.promisify(fs.readFile);
 const access = util.promisify(fs.access);
 const stat = util.promisify(fs.stat);
 
-// Répertoire de base pour les fichiers
-const BASE_DIRECTORY = process.env.UPLOAD_DIRECTORY || process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
+// Répertoire de base pour les fichiers (REQUIS)
+const BASE_DIRECTORY = process.env.UPLOAD_DIRECTORY;
+if (!BASE_DIRECTORY) {
+  console.error("❌ ERREUR: La variable d'environnement UPLOAD_DIRECTORY n'est pas définie.");
+}
 
 // Helper pour normaliser les noms de fichiers pour la comparaison
 function normalizeForMatch(str: string): string {
@@ -59,6 +62,14 @@ function findFileRecursively(dir: string, filename: string): string | null {
 
 export async function GET(request: Request) {
   try {
+    // Vérifier que UPLOAD_DIRECTORY est défini
+    if (!BASE_DIRECTORY) {
+      return NextResponse.json(
+        { error: "Configuration serveur incorrecte: UPLOAD_DIRECTORY non défini" },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const filePath = searchParams.get("path");
     const download = searchParams.get("download") === "true";
@@ -202,6 +213,11 @@ export async function GET(request: Request) {
 // Also handle HEAD requests for file existence checks
 export async function HEAD(request: Request) {
   try {
+    // Vérifier que UPLOAD_DIRECTORY est défini
+    if (!BASE_DIRECTORY) {
+      return new NextResponse(null, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const filePath = searchParams.get("path");
 

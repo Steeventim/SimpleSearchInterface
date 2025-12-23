@@ -70,6 +70,10 @@ export function SimplePdfPartitioner({
     const basePaths = [
       "/home/tims/Documents/",
       "/home/tims/Documents",
+      "/Users/laure/Desktop/Doc1/",
+      "/Users/laure/Desktop/Doc1",
+      "C:/Users/laure/Desktop/Doc1/",
+      "C:/Users/laure/Desktop/Doc1",
       "C:/Users/laure/Desktop/Document/",
       "C:/Users/laure/Desktop/Document",
     ];
@@ -342,11 +346,10 @@ export function SimplePdfPartitioner({
                     <button
                       key={index}
                       onClick={() => setCurrentPartition(index)}
-                      className={`px-3 py-1 rounded text-sm transition-all ${
-                        index === currentPartition
+                      className={`px-3 py-1 rounded text-sm transition-all ${index === currentPartition
                           ? "bg-blue-600 text-white"
                           : "text-gray-600 hover:bg-gray-200"
-                      }`}
+                        }`}
                     >
                       Page {partition.pageNumber}
                       {partition.hasSearchTerm && (

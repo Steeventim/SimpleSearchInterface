@@ -4,8 +4,11 @@ import { join } from "path";
 import * as fs from "fs"; // Import fs as a namespace for fs.readdirSync, fs.statSync
 import * as path from "path"; // Import path as a namespace for path.join
 
-// Répertoire de base pour les PDFs (configurable via env)
-const PDF_BASE_DIRECTORY = process.env.UPLOAD_DIRECTORY || process.env.PDF_DIRECTORY || "C:\\Users\\laure\\Desktop\\Document";
+// Répertoire de base pour les PDFs (REQUIS)
+const PDF_BASE_DIRECTORY = process.env.UPLOAD_DIRECTORY;
+if (!PDF_BASE_DIRECTORY) {
+  console.error("❌ ERREUR: La variable d'environnement UPLOAD_DIRECTORY n'est pas définie.");
+}
 
 // Helper pour normaliser les noms de fichiers pour la comparaison
 function normalizeForMatch(str: string): string {
@@ -71,6 +74,14 @@ export async function GET(
   { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
+    // Vérifier que UPLOAD_DIRECTORY est défini
+    if (!PDF_BASE_DIRECTORY) {
+      return NextResponse.json(
+        { error: "Configuration serveur incorrecte: UPLOAD_DIRECTORY non défini" },
+        { status: 500 }
+      );
+    }
+
     const { slug } = await params;
 
     // Reconstruire le chemin du fichier à partir des segments d'URL

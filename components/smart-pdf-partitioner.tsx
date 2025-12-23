@@ -89,6 +89,10 @@ export function SmartPdfPartitioner({
     const basePaths = [
       "/home/tims/Documents/",
       "/home/tims/Documents",
+      "/Users/laure/Desktop/Doc1/",
+      "/Users/laure/Desktop/Doc1",
+      "C:/Users/laure/Desktop/Doc1/",
+      "C:/Users/laure/Desktop/Doc1",
       "C:/Users/laure/Desktop/Document/",
       "C:/Users/laure/Desktop/Document",
     ];
@@ -775,11 +779,10 @@ export function SmartPdfPartitioner({
                           <button
                             key={index}
                             onClick={() => setCurrentPartition(index)}
-                            className={`px-3 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-1 ${
-                              index === currentPartition
+                            className={`px-3 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-1 ${index === currentPartition
                                 ? "bg-white shadow-sm text-blue-600"
                                 : "text-gray-600 hover:text-gray-900"
-                            }`}
+                              }`}
                           >
                             {getPageTypeIcon(partition.pageType)}
                             <span>P.{partition.pageNumber}</span>
@@ -832,33 +835,33 @@ export function SmartPdfPartitioner({
                             {/* Indicateur de correspondances */}
                             {partitionedPages[currentPartition]
                               .hasSearchTerm && (
-                              <div
-                                className="absolute top-2 right-2"
-                                style={{
-                                  transform: `scale(${Math.max(
-                                    0.8 / zoomLevel,
-                                    0.6
-                                  )})`,
-                                  transformOrigin: "top right",
-                                }}
-                              >
-                                <Badge
-                                  variant="default"
-                                  className="shadow-lg bg-green-600 hover:bg-green-700"
+                                <div
+                                  className="absolute top-2 right-2"
+                                  style={{
+                                    transform: `scale(${Math.max(
+                                      0.8 / zoomLevel,
+                                      0.6
+                                    )})`,
+                                    transformOrigin: "top right",
+                                  }}
                                 >
-                                  <Search className="h-3 w-3 mr-1" />
-                                  {
-                                    partitionedPages[currentPartition]
-                                      .searchMatches
-                                  }{" "}
-                                  match
-                                  {partitionedPages[currentPartition]
-                                    .searchMatches > 1
-                                    ? "es"
-                                    : ""}
-                                </Badge>
-                              </div>
-                            )}
+                                  <Badge
+                                    variant="default"
+                                    className="shadow-lg bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Search className="h-3 w-3 mr-1" />
+                                    {
+                                      partitionedPages[currentPartition]
+                                        .searchMatches
+                                    }{" "}
+                                    match
+                                    {partitionedPages[currentPartition]
+                                      .searchMatches > 1
+                                      ? "es"
+                                      : ""}
+                                  </Badge>
+                                </div>
+                              )}
 
                             {/* Indicateur du type de page */}
                             <div
