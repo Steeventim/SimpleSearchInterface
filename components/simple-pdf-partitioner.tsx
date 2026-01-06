@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  ChevronLeft,
-  ChevronRight,
   Search,
   Loader2,
   FileText,
   Eye,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { usePdfjs } from "@/lib/pdf-utils";
 
@@ -58,6 +59,12 @@ export function SimplePdfPartitioner({
     contentPages: number[];
     bestContentPage: number;
   } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  // Zoom functions
+  const zoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 3));
+  const zoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.25, 0.5));
+  const resetZoom = () => setZoomLevel(1);
 
   // Transformer une URL file:// en URL d'API
   const transformFileUrlToApiUrl = (url: string): string => {
@@ -299,23 +306,12 @@ export function SimplePdfPartitioner({
     loadPdf();
   }, [isOpen, documentUrl, searchTerm, pdfjs, pdfjsLoading]);
 
-  // Navigation
-  const goToPreviousPartition = () => {
-    setCurrentPartition((prev) => Math.max(0, prev - 1));
-  };
-
-  const goToNextPartition = () => {
-    setCurrentPartition((prev) =>
-      Math.min(partitionedPages.length - 1, prev + 1)
-    );
-  };
-
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
-        <DialogHeader className="pb-2">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center space-x-2">
             <Eye className="h-5 w-5" />
             <span>{documentTitle || "Document PDF"}</span>
@@ -362,95 +358,113 @@ export function SimplePdfPartitioner({
           !pdfjsLoading &&
           !pdfjsError &&
           partitionedPages.length > 0 && (
-            <div className="flex-1 flex flex-col min-h-0 space-y-3">
-              {/* Résumé simple */}
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
-                <div className="flex items-center space-x-4">
-                  <Search className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm">
-                    Recherche : <strong>"{searchTerm}"</strong>
-                  </span>
-                  <Badge variant="secondary">
-                    {analysisResults?.contentPages.length} pages avec contenu
-                  </Badge>
-                </div>
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* Barre de contrôle compacte */}
+              <div className="flex-shrink-0 mb-4">
+                <Card>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      {/* Info & Stats */}
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm font-medium px-3 flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                          {partitionedPages.length} pages pertinentes affichées
+                          <span className="text-gray-400 mx-2">/</span>
+                          {analysisResults?.totalPages} pages totales
+                        </div>
 
-                {/* Navigation simple */}
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPreviousPartition}
-                    disabled={currentPartition === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
+                        <div className="flex items-center space-x-2">
+                          <Search className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm border-l pl-2">"{searchTerm}" found {analysisResults?.contentPages.length} times</span>
+                        </div>
+                      </div>
 
-                  <span className="text-sm font-medium px-3">
-                    Page {partitionedPages[currentPartition]?.pageNumber} /{" "}
-                    {analysisResults?.totalPages}
-                  </span>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextPartition}
-                    disabled={currentPartition === partitionedPages.length - 1}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                      {/* Contrôles de zoom */}
+                      <div className="flex items-center space-x-1 border rounded px-2 py-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={zoomOut}
+                          disabled={zoomLevel <= 0.5}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ZoomOut className="h-3 w-3" />
+                        </Button>
+                        <span className="text-xs font-medium min-w-[3rem] text-center">
+                          {Math.round(zoomLevel * 100)}%
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={zoomIn}
+                          disabled={zoomLevel >= 3}
+                          className="h-6 w-6 p-0"
+                        >
+                          <ZoomIn className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={resetZoom}
+                          className="h-6 w-6 p-0"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Navigation par pages */}
-              <div className="flex justify-center">
-                <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+              {/* Zone d'affichage du PDF - Liste défilante verticale */}
+              <div className="flex-1 bg-gray-50 rounded-lg overflow-y-auto min-h-0 p-4">
+                <div className="flex flex-col items-center space-y-6">
                   {partitionedPages.map((partition, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPartition(index)}
-                      className={`px-3 py-1 rounded text-sm transition-all ${index === currentPartition
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-600 hover:bg-gray-200"
-                        }`}
-                    >
-                      Page {partition.pageNumber}
-                      {partition.hasSearchTerm && (
-                        <span className="ml-1">🔍</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    <div key={index} className="relative shadow-xl border border-gray-300 bg-white rounded">
+                      <div className="absolute -top-3 -left-3 z-10">
+                        <Badge variant="outline" className="bg-white font-bold border-blue-200 text-blue-700">
+                          Page {partition.pageNumber}
+                        </Badge>
+                      </div>
 
-              {/* Zone d'affichage du PDF - Pleine taille */}
-              <div className="flex-1 bg-gray-50 rounded-lg overflow-hidden min-h-0">
-                <div className="h-full w-full flex items-center justify-center p-4">
-                  {partitionedPages[currentPartition] && (
-                    <div className="relative max-w-full max-h-full">
                       <canvas
                         ref={(canvas) => {
-                          if (canvas && partitionedPages[currentPartition]) {
+                          if (canvas) {
                             const ctx = canvas.getContext("2d");
-                            const sourceCanvas =
-                              partitionedPages[currentPartition].canvas;
-                            canvas.width = sourceCanvas.width;
-                            canvas.height = sourceCanvas.height;
-                            ctx?.drawImage(sourceCanvas, 0, 0);
+                            const sourceCanvas = partition.canvas;
+                            if (canvas.width !== sourceCanvas.width) {
+                              canvas.width = sourceCanvas.width;
+                              canvas.height = sourceCanvas.height;
+                              ctx?.drawImage(sourceCanvas, 0, 0);
+                            }
                           }
                         }}
-                        className="max-w-full max-h-full object-contain shadow-lg border border-gray-300 bg-white rounded"
+                        className="max-w-full object-contain bg-white rounded"
+                        style={{
+                          transform: `scale(${zoomLevel})`,
+                          transformOrigin: "top center",
+                          transition: "transform 0.2s ease-in-out",
+                        }}
                       />
 
-                      {/* Badge de correspondances */}
-                      {partitionedPages[currentPartition].hasSearchTerm && (
+                      {/* Badge de correspondances flottant */}
+                      {partition.hasSearchTerm && (
                         <div className="absolute top-2 right-2">
-                          <Badge variant="default" className="bg-green-600">
-                            {partitionedPages[currentPartition].searchMatches}{" "}
-                            correspondances
+                          <Badge
+                            variant="default"
+                            className="bg-green-600 shadow-lg opacity-90"
+                          >
+                            <Search className="h-3 w-3 mr-1" />
+                            {partition.searchMatches} correspondances
                           </Badge>
                         </div>
                       )}
+                    </div>
+                  ))}
+
+                  {partitionedPages.length === 0 && (
+                    <div className="py-20 text-center text-gray-500">
+                      Aucune page à afficher
                     </div>
                   )}
                 </div>

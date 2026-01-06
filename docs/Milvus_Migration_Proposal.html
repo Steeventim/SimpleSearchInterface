@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CENADI Document Search System - Milvus Migration Proposal</title>
+    <style>
+        @page {
+            margin: 2.5cm;
+            size: A4;
+        }
+        body {
+            font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 2cm;
+            background: white;
+        }
+        h1 {
+            font-size: 24pt;
+            color: #1a365d;
+            text-align: center;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+        h2 {
+            font-size: 16pt;
+            color: #2c5282;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 13pt;
+            color: #2d3748;
+            margin-top: 20px;
+            page-break-after: avoid;
+        }
+        h4 {
+            font-size: 11pt;
+            color: #4a5568;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .header-info {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+        }
+        .header-info p {
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        th, td {
+            border: 1px solid #cbd5e0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2c5282;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        tr:hover {
+            background-color: #edf2f7;
+        }
+        .toc {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 20px 30px;
+            margin: 20px 0;
+        }
+        .toc h2 {
+            border-bottom: none;
+            margin-top: 0;
+        }
+        .toc ol {
+            columns: 2;
+            column-gap: 40px;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .cover-page {
+            text-align: center;
+            padding: 100px 0;
+            page-break-after: always;
+        }
+        .cover-page h1 {
+            font-size: 28pt;
+            border-bottom: none;
+            margin-bottom: 20px;
+        }
+        .cover-page .subtitle {
+            font-size: 18pt;
+            color: #4a5568;
+            margin-bottom: 60px;
+        }
+        .cover-page .meta {
+            margin-top: 80px;
+            font-size: 11pt;
+            color: #666;
+        }
+        .cover-page .meta p {
+            margin: 8px 0;
+        }
+        .section {
+            page-break-before: auto;
+        }
+        .approval-table {
+            margin-top: 40px;
+        }
+        .approval-table td:first-child {
+            width: 25%;
+        }
+        .approval-table td:nth-child(2) {
+            width: 35%;
+        }
+        .approval-table td:nth-child(3) {
+            width: 25%;
+        }
+        .approval-table td:nth-child(4) {
+            width: 15%;
+        }
+        strong {
+            color: #1a365d;
+        }
+        .highlight-box {
+            background-color: #ebf8ff;
+            border-left: 4px solid #2c5282;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .risk-high {
+            color: #c53030;
+            font-weight: bold;
+        }
+        .risk-medium {
+            color: #d69e2e;
+            font-weight: bold;
+        }
+        .risk-low {
+            color: #38a169;
+            font-weight: bold;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 30px 0;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Cover Page -->
+<div class="cover-page">
+    <h1>CENADI Document Search System</h1>
+    <p class="subtitle">Technical Migration Proposal:<br>Elasticsearch to Milvus Vector Database</p>
+    
+    <div class="meta">
+        <p><strong>Document Version:</strong> 1.0</p>
+        <p><strong>Date:</strong> January 5, 2026</p>
+        <p><strong>Classification:</strong> Internal - Technical Proposal</p>
+        <p><strong>Prepared by:</strong> Technical Architecture Team</p>
+    </div>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+        <li>Executive Summary</li>
+        <li>Current System Architecture</li>
+        <li>Proposed Architecture with Milvus</li>
+        <li>Comparative Analysis</li>
+        <li>Feature Mapping and Compatibility</li>
+        <li>Security and Access Control</li>
+        <li>Implementation Plan</li>
+        <li>Risk Assessment and Mitigation</li>
+        <li>Resource Requirements</li>
+        <li>Timeline and Milestones</li>
+        <li>Recommendations</li>
+    </ol>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 1 -->
+<div class="section">
+    <h2>1. Executive Summary</h2>
+    
+    <h3>1.1 Purpose</h3>
+    <p>This document presents a comprehensive technical proposal for migrating the CENADI Document Search System from the current Elasticsearch and FSCrawler-based architecture to a modern vector database solution using Milvus. The proposal aims to evaluate the feasibility, benefits, challenges, and implementation strategy for this migration.</p>
+    
+    <h3>1.2 Background</h3>
+    <p>The current document search system relies on Elasticsearch for full-text indexing and search capabilities, combined with FSCrawler for document crawling, OCR processing, and text extraction. While this architecture has served the organization's needs, emerging vector database technologies offer potential improvements in search relevance, semantic understanding, and system simplification.</p>
+    
+    <h3>1.3 Scope</h3>
+    <p>This proposal covers:</p>
+    <ul>
+        <li>Technical comparison between current and proposed architectures</li>
+        <li>Feature compatibility assessment</li>
+        <li>Security considerations for division-based access control</li>
+        <li>Implementation roadmap and resource requirements</li>
+        <li>Risk assessment and mitigation strategies</li>
+    </ul>
+    
+    <h3>1.4 Key Findings</h3>
+    <div class="highlight-box">
+        <p>The analysis concludes that migration to Milvus is technically feasible and offers several advantages including semantic search capabilities, reduced infrastructure complexity, and improved page-level document indexing. However, the migration requires careful planning to maintain existing functionality, particularly regarding text highlighting and file monitoring capabilities.</p>
+    </div>
+</div>
+
+<!-- Section 2 -->
+<div class="section">
+    <h2>2. Current System Architecture</h2>
+    
+    <h3>2.1 Architecture Overview</h3>
+    <p>The existing CENADI Document Search System comprises four primary containerized components operating within a Docker environment:</p>
+    
+    <h4>Component 1: Elasticsearch (Version 8.17.0)</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Document indexing and full-text search</li>
+        <li><strong>Function:</strong> Stores extracted document content and metadata, provides BM25-based search ranking</li>
+        <li><strong>Resource Allocation:</strong> Approximately 2GB RAM</li>
+    </ul>
+    
+    <h4>Component 2: FSCrawler</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Document crawling and text extraction</li>
+        <li><strong>Function:</strong> Monitors file directories, performs OCR on PDF documents using Tesseract, extracts text content, and indexes documents into Elasticsearch</li>
+        <li><strong>Key Features:</strong> Automatic file watching, PDF OCR support, metadata extraction</li>
+    </ul>
+    
+    <h4>Component 3: PostgreSQL Database</h4>
+    <ul>
+        <li><strong>Purpose:</strong> User management and application data</li>
+        <li><strong>Function:</strong> Stores user accounts, roles, divisions, and session information</li>
+    </ul>
+    
+    <h4>Component 4: Next.js Application</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Web interface and API layer</li>
+        <li><strong>Function:</strong> Provides search interface, document preview with page partitioning, and user authentication</li>
+    </ul>
+    
+    <h3>2.2 Current Search Capabilities</h3>
+    <p>The system currently supports:</p>
+    <ul>
+        <li>Keyword-based full-text search using BM25 algorithm</li>
+        <li>Fuzzy matching for approximate term matching</li>
+        <li>Date-based filtering (today, this week, this month, this year)</li>
+        <li>Document type filtering</li>
+        <li>Search result highlighting with matched terms</li>
+        <li>Division-based access control through path filtering</li>
+    </ul>
+    
+    <h3>2.3 Document Processing Flow</h3>
+    <ol>
+        <li>Documents are placed in monitored directories organized by division</li>
+        <li>FSCrawler detects new or modified files</li>
+        <li>OCR processing extracts text from scanned PDFs</li>
+        <li>Extracted content and metadata are indexed in Elasticsearch</li>
+        <li>Users search through the web interface</li>
+        <li>Results are filtered based on user division and role</li>
+        <li>Document preview shows relevant pages with highlighted search terms</li>
+    </ol>
+    
+    <h3>2.4 Current Limitations</h3>
+    <ul>
+        <li>Search is purely keyword-based; semantically similar terms are not matched</li>
+        <li>Page-level indexing is not performed; the entire document is indexed as a single unit</li>
+        <li>Client-side PDF processing is required to identify matching pages</li>
+        <li>Multiple components increase operational complexity</li>
+        <li>Total system memory requirement exceeds 4GB</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 3 -->
+<div class="section">
+    <h2>3. Proposed Architecture with Milvus</h2>
+    
+    <h3>3.1 Architecture Overview</h3>
+    <p>The proposed architecture replaces Elasticsearch and FSCrawler with Milvus vector database and a custom Python-based document processing service:</p>
+    
+    <h4>Component 1: Milvus Vector Database (Version 2.4+)</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Vector storage, similarity search, and full-text search</li>
+        <li><strong>Function:</strong> Stores document embeddings, supports hybrid search combining semantic and keyword matching</li>
+        <li><strong>Resource Allocation:</strong> Approximately 1-2GB RAM</li>
+    </ul>
+    
+    <h4>Component 2: Etcd</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Milvus metadata storage</li>
+        <li><strong>Function:</strong> Distributed key-value store required by Milvus</li>
+        <li><strong>Resource Allocation:</strong> Minimal (approximately 256MB RAM)</li>
+    </ul>
+    
+    <h4>Component 3: Document Processing Service (Python)</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Document crawling, OCR, and embedding generation</li>
+        <li><strong>Function:</strong> Monitors directories, extracts text using Tesseract, generates vector embeddings, indexes into Milvus</li>
+        <li><strong>Key Libraries:</strong> PyMuPDF, pytesseract, sentence-transformers, watchdog</li>
+    </ul>
+    
+    <h4>Component 4: PostgreSQL Database</h4>
+    <ul>
+        <li><strong>Purpose:</strong> User management (unchanged)</li>
+    </ul>
+    
+    <h4>Component 5: Next.js Application</h4>
+    <ul>
+        <li><strong>Purpose:</strong> Web interface and API layer (modified for Milvus integration)</li>
+    </ul>
+    
+    <h3>3.2 Proposed Search Capabilities</h3>
+    <p>The new system will support:</p>
+    <ul>
+        <li>Keyword-based full-text search (BM25 algorithm, native in Milvus 2.4+)</li>
+        <li>Semantic similarity search using vector embeddings</li>
+        <li>Hybrid search combining both approaches for optimal results</li>
+        <li>All existing filtering capabilities (date, type, division)</li>
+        <li>Page-level search results with pre-indexed page information</li>
+        <li>Division-based access control through scalar field filtering</li>
+    </ul>
+    
+    <h3>3.3 Proposed Document Processing Flow</h3>
+    <ol>
+        <li>Documents are placed in monitored directories organized by division</li>
+        <li>Python service detects new or modified files using watchdog library</li>
+        <li>OCR processing extracts text from scanned PDFs (page by page)</li>
+        <li>Each page is converted to a vector embedding using sentence-transformers</li>
+        <li>Page content, embedding, and metadata are indexed in Milvus</li>
+        <li>Users search through the web interface</li>
+        <li>Results include exact page numbers containing matches</li>
+        <li>Document preview directly navigates to matching pages</li>
+    </ol>
+    
+    <h3>3.4 Embedding Model Considerations</h3>
+    <p>The proposed solution uses locally-hosted embedding models, eliminating dependency on external APIs. Given that CENADI documents are primarily in <strong>French and English</strong>, a multilingual embedding model is essential to ensure accurate semantic search across both languages.</p>
+    
+    <p><strong>Recommended Model: paraphrase-multilingual-MiniLM-L12-v2</strong></p>
+    <ul>
+        <li>Embedding Dimension: 384</li>
+        <li>Model Size: Approximately 420MB</li>
+        <li>Supported Languages: 50+ languages including French and English</li>
+        <li>Inference Speed: Fast (suitable for real-time indexing)</li>
+        <li>License: Apache 2.0 (free for commercial use)</li>
+        <li>Hosting: Local execution within the Python service container</li>
+        <li>Key Advantage: Cross-lingual semantic matching (a French query can find relevant English documents and vice versa)</li>
+    </ul>
+    
+    <h4>Why Multilingual Support is Critical</h4>
+    <ul>
+        <li>CENADI documents contain a mix of French and English content</li>
+        <li>Users may search in French for documents written in English (or vice versa)</li>
+        <li>Multilingual models understand semantic meaning across language boundaries</li>
+        <li>Example: Searching "politique de conge" (French) will also find documents about "vacation policy" (English)</li>
+    </ul>
+    
+    <p>Alternative models may be considered based on performance requirements:</p>
+    <table>
+        <tr>
+            <th>Model</th>
+            <th>Dimensions</th>
+            <th>Size</th>
+            <th>Languages</th>
+            <th>Best For</th>
+        </tr>
+        <tr>
+            <td>paraphrase-multilingual-MiniLM-L12-v2</td>
+            <td>384</td>
+            <td>420MB</td>
+            <td>50+</td>
+            <td>Recommended - Best balance of speed and multilingual quality</td>
+        </tr>
+        <tr>
+            <td>paraphrase-multilingual-mpnet-base-v2</td>
+            <td>768</td>
+            <td>1.1GB</td>
+            <td>50+</td>
+            <td>Higher accuracy, requires more memory</td>
+        </tr>
+        <tr>
+            <td>distiluse-base-multilingual-cased-v2</td>
+            <td>512</td>
+            <td>480MB</td>
+            <td>15</td>
+            <td>Good alternative, slightly different architecture</td>
+        </tr>
+        <tr>
+            <td>all-MiniLM-L6-v2</td>
+            <td>384</td>
+            <td>80MB</td>
+            <td>English only</td>
+            <td>Not recommended for multilingual environments</td>
+        </tr>
+    </table>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 4 -->
+<div class="section">
+    <h2>4. Comparative Analysis</h2>
+    
+    <h3>4.1 Infrastructure Comparison</h3>
+    <table>
+        <tr>
+            <th>Aspect</th>
+            <th>Current Architecture</th>
+            <th>Proposed Architecture</th>
+        </tr>
+        <tr>
+            <td>Number of Docker Containers</td>
+            <td>5 (ES, Kibana, FSCrawler, PostgreSQL, App)</td>
+            <td>4 (Milvus, Etcd, PostgreSQL, App + Python)</td>
+        </tr>
+        <tr>
+            <td>Estimated Memory Usage</td>
+            <td>4-5 GB</td>
+            <td>2-3 GB</td>
+        </tr>
+        <tr>
+            <td>Storage Requirements</td>
+            <td>Moderate</td>
+            <td>Similar</td>
+        </tr>
+        <tr>
+            <td>Network Complexity</td>
+            <td>Moderate</td>
+            <td>Lower</td>
+        </tr>
+        <tr>
+            <td>External Dependencies</td>
+            <td>None</td>
+            <td>None (local embedding model)</td>
+        </tr>
+    </table>
+    
+    <h3>4.2 Search Capability Comparison</h3>
+    <table>
+        <tr>
+            <th>Capability</th>
+            <th>Current Architecture</th>
+            <th>Proposed Architecture</th>
+        </tr>
+        <tr>
+            <td>Keyword Search</td>
+            <td>Yes (BM25)</td>
+            <td>Yes (BM25)</td>
+        </tr>
+        <tr>
+            <td>Fuzzy Matching</td>
+            <td>Yes</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td>Semantic Search</td>
+            <td>No</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td>Hybrid Search</td>
+            <td>No</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td>Synonym Matching</td>
+            <td>Manual configuration</td>
+            <td>Automatic via semantics</td>
+        </tr>
+        <tr>
+            <td>Cross-language Search</td>
+            <td>No</td>
+            <td>Possible with multilingual models</td>
+        </tr>
+    </table>
+    
+    <h3>4.3 Document Processing Comparison</h3>
+    <table>
+        <tr>
+            <th>Aspect</th>
+            <th>Current Architecture</th>
+            <th>Proposed Architecture</th>
+        </tr>
+        <tr>
+            <td>OCR Engine</td>
+            <td>Tesseract (via FSCrawler)</td>
+            <td>Tesseract (via Python)</td>
+        </tr>
+        <tr>
+            <td>OCR Quality</td>
+            <td>Standard</td>
+            <td>Standard (identical)</td>
+        </tr>
+        <tr>
+            <td>Indexing Granularity</td>
+            <td>Document level</td>
+            <td>Page level</td>
+        </tr>
+        <tr>
+            <td>Metadata Extraction</td>
+            <td>Automatic (FSCrawler)</td>
+            <td>Custom (Python)</td>
+        </tr>
+        <tr>
+            <td>File Format Support</td>
+            <td>Extensive (FSCrawler)</td>
+            <td>PDF, Images (extensible)</td>
+        </tr>
+        <tr>
+            <td>Processing Speed</td>
+            <td>Moderate</td>
+            <td>Similar</td>
+        </tr>
+    </table>
+    
+    <h3>4.4 Advantages of Proposed Architecture</h3>
+    
+    <h4>Search Quality Improvements</h4>
+    <ul>
+        <li>Semantic search enables finding documents based on meaning rather than exact keywords</li>
+        <li>Users searching for "employee vacation policy" can find documents titled "Annual Leave Guidelines"</li>
+        <li>Reduced reliance on users knowing exact terminology</li>
+    </ul>
+    
+    <h4>Performance Improvements</h4>
+    <ul>
+        <li>Page-level indexing eliminates client-side PDF scanning</li>
+        <li>Pre-computed page matches enable instant navigation to relevant content</li>
+        <li>Reduced memory footprint allows deployment on smaller infrastructure</li>
+    </ul>
+    
+    <h4>Operational Simplification</h4>
+    <ul>
+        <li>Fewer containers reduce operational complexity</li>
+        <li>Unified vector database handles both storage and search</li>
+        <li>Python-based processing service offers greater customization flexibility</li>
+    </ul>
+    
+    <h4>Future Capabilities</h4>
+    <ul>
+        <li>Foundation for advanced features such as document similarity</li>
+        <li>Potential for question-answering systems using retrieval-augmented generation</li>
+        <li>Easier integration with machine learning workflows</li>
+    </ul>
+    
+    <h3>4.5 Disadvantages and Challenges</h3>
+    
+    <h4>Implementation Complexity</h4>
+    <ul>
+        <li>Requires development of custom document processing service</li>
+        <li>Migration of existing indexed documents necessary</li>
+        <li>Learning curve for Milvus administration</li>
+    </ul>
+    
+    <h4>Feature Gaps</h4>
+    <ul>
+        <li>Native highlighting not available; requires custom implementation</li>
+        <li>FSCrawler's extensive file format support must be replicated</li>
+        <li>File watching requires additional implementation</li>
+    </ul>
+    
+    <h4>Operational Considerations</h4>
+    <ul>
+        <li>New technology stack requires team training</li>
+        <li>Milvus community smaller than Elasticsearch</li>
+        <li>Embedding model updates may require reindexing</li>
+    </ul>
+    
+    <h4>Risk Factors</h4>
+    <ul>
+        <li>Less mature technology compared to Elasticsearch</li>
+        <li>Fewer third-party tools and integrations available</li>
+        <li>Documentation and community support less extensive</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 5 -->
+<div class="section">
+    <h2>5. Feature Mapping and Compatibility</h2>
+    
+    <h3>5.1 Search Features</h3>
+    <table>
+        <tr>
+            <th>Current Feature</th>
+            <th>Milvus Equivalent</th>
+            <th>Implementation Effort</th>
+        </tr>
+        <tr>
+            <td>Full-text search</td>
+            <td>BM25 index (native)</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Fuzzy matching</td>
+            <td>BM25 with tokenization</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Date filtering</td>
+            <td>Scalar field filter</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Type filtering</td>
+            <td>Scalar field filter</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Path filtering</td>
+            <td>Scalar field filter</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Result highlighting</td>
+            <td>Custom implementation</td>
+            <td>Medium</td>
+        </tr>
+        <tr>
+            <td>Search suggestions</td>
+            <td>Vector similarity on queries</td>
+            <td>Medium</td>
+        </tr>
+    </table>
+    
+    <h3>5.2 Document Processing Features</h3>
+    <table>
+        <tr>
+            <th>Current Feature</th>
+            <th>Milvus Equivalent</th>
+            <th>Implementation Effort</th>
+        </tr>
+        <tr>
+            <td>PDF text extraction</td>
+            <td>PyMuPDF library</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>OCR processing</td>
+            <td>pytesseract library</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Automatic file watching</td>
+            <td>watchdog library</td>
+            <td>Medium</td>
+        </tr>
+        <tr>
+            <td>Metadata extraction</td>
+            <td>Custom Python code</td>
+            <td>Medium</td>
+        </tr>
+        <tr>
+            <td>Incremental updates</td>
+            <td>Custom implementation</td>
+            <td>Medium</td>
+        </tr>
+        <tr>
+            <td>Deleted file handling</td>
+            <td>Custom implementation</td>
+            <td>Medium</td>
+        </tr>
+    </table>
+    
+    <h3>5.3 Application Features</h3>
+    <table>
+        <tr>
+            <th>Current Feature</th>
+            <th>Migration Impact</th>
+            <th>Implementation Effort</th>
+        </tr>
+        <tr>
+            <td>Search interface</td>
+            <td>API endpoint changes</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>PDF preview with partitioning</td>
+            <td>Enhanced with page data</td>
+            <td>Low (improvement)</td>
+        </tr>
+        <tr>
+            <td>Highlighting in PDF</td>
+            <td>Unchanged (client-side)</td>
+            <td>None</td>
+        </tr>
+        <tr>
+            <td>User authentication</td>
+            <td>Unchanged</td>
+            <td>None</td>
+        </tr>
+        <tr>
+            <td>Division-based filtering</td>
+            <td>Scalar field filter</td>
+            <td>Low</td>
+        </tr>
+        <tr>
+            <td>Document upload</td>
+            <td>Modified indexing call</td>
+            <td>Low</td>
+        </tr>
+    </table>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 6 -->
+<div class="section">
+    <h2>6. Security and Access Control</h2>
+    
+    <h3>6.1 Current Security Model</h3>
+    <p>The existing system implements Role-Based Access Control (RBAC) through path filtering:</p>
+    <ul>
+        <li>Users are assigned to divisions (e.g., DEL, DRH, CENADI)</li>
+        <li>Document access is controlled by matching document paths with user divisions</li>
+        <li>The CENADI Director role bypasses division restrictions</li>
+        <li>Filtering occurs at the Elasticsearch query level</li>
+    </ul>
+    
+    <h3>6.2 Proposed Security Model</h3>
+    <p>The proposed system maintains equivalent security through scalar field filtering in Milvus:</p>
+    
+    <h4>Division Field Storage</h4>
+    <ul>
+        <li>Each indexed page includes a "division" field extracted from the file path</li>
+        <li>Division values are stored as scalar VARCHAR fields</li>
+        <li>Additional fields for user_id enable user-specific document filtering</li>
+    </ul>
+    
+    <h4>Query-Level Filtering</h4>
+    <ul>
+        <li>Milvus filter expressions provide equivalent functionality to Elasticsearch query filters</li>
+        <li>Example filter: division == "DEL" OR division == "SHARED"</li>
+        <li>Role-based bypass logic remains in application layer</li>
+    </ul>
+    
+    <h3>6.3 Security Comparison</h3>
+    <table>
+        <tr>
+            <th>Security Aspect</th>
+            <th>Current Implementation</th>
+            <th>Proposed Implementation</th>
+        </tr>
+        <tr>
+            <td>Division-based access</td>
+            <td>Path wildcard filter</td>
+            <td>Scalar field equality filter</td>
+        </tr>
+        <tr>
+            <td>Role-based bypass</td>
+            <td>Application logic</td>
+            <td>Application logic (unchanged)</td>
+        </tr>
+        <tr>
+            <td>User-specific documents</td>
+            <td>user_id field filter</td>
+            <td>user_id field filter</td>
+        </tr>
+        <tr>
+            <td>Query-level enforcement</td>
+            <td>Elasticsearch bool query</td>
+            <td>Milvus filter expression</td>
+        </tr>
+        <tr>
+            <td>Data isolation</td>
+            <td>Index-level</td>
+            <td>Collection-level or filter-level</td>
+        </tr>
+    </table>
+    
+    <h3>6.4 Security Considerations</h3>
+    
+    <h4>Equivalent Security Posture</h4>
+    <ul>
+        <li>The proposed architecture maintains the same security model</li>
+        <li>No reduction in access control capabilities</li>
+        <li>Filter expressions are enforced at the database level</li>
+    </ul>
+    
+    <h4>Additional Security Options</h4>
+    <ul>
+        <li>Milvus supports collection-level access control for stronger isolation</li>
+        <li>Partition keys can separate divisions for improved performance</li>
+        <li>API-level authentication remains unchanged</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 7 -->
+<div class="section">
+    <h2>7. Implementation Plan</h2>
+    
+    <h3>7.1 Phase 1: Infrastructure Setup (Week 1-2)</h3>
+    <p><strong>Objective:</strong> Establish Milvus infrastructure in development environment</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Create Docker Compose configuration for Milvus and Etcd</li>
+        <li>Configure Milvus collection schema with required fields</li>
+        <li>Set up Python document processing service container</li>
+        <li>Install and configure embedding model</li>
+        <li>Validate basic connectivity and operations</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Docker Compose file for new infrastructure</li>
+        <li>Milvus collection with defined schema</li>
+        <li>Functional Python service skeleton</li>
+        <li>Infrastructure validation report</li>
+    </ul>
+    
+    <h3>7.2 Phase 2: Document Processing Service (Week 2-4)</h3>
+    <p><strong>Objective:</strong> Develop document processing capabilities equivalent to FSCrawler</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Implement PDF text extraction using PyMuPDF</li>
+        <li>Integrate Tesseract OCR for scanned documents</li>
+        <li>Develop page-level text chunking logic</li>
+        <li>Implement embedding generation using sentence-transformers</li>
+        <li>Create Milvus indexing functions</li>
+        <li>Implement file watching using watchdog library</li>
+        <li>Develop metadata extraction utilities</li>
+        <li>Create document update and deletion handlers</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Complete document processing service</li>
+        <li>File watching and monitoring system</li>
+        <li>OCR and text extraction pipeline</li>
+        <li>Unit tests for processing components</li>
+    </ul>
+    
+    <h3>7.3 Phase 3: Search API Development (Week 4-5)</h3>
+    <p><strong>Objective:</strong> Create API endpoints for hybrid search with RBAC</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Develop Milvus client library for Next.js</li>
+        <li>Implement hybrid search combining BM25 and vector similarity</li>
+        <li>Port division-based filtering logic</li>
+        <li>Implement result aggregation and ranking</li>
+        <li>Develop highlighting logic using stored text</li>
+        <li>Create search suggestion endpoint using vector similarity</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Milvus client library</li>
+        <li>Search API endpoints</li>
+        <li>Filter and RBAC implementation</li>
+        <li>API documentation</li>
+    </ul>
+    
+    <h3>7.4 Phase 4: Frontend Integration (Week 5-6)</h3>
+    <p><strong>Objective:</strong> Update frontend to utilize new search capabilities</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Update search result components for page-level results</li>
+        <li>Modify PDF viewer to accept server-provided page numbers</li>
+        <li>Implement client-side highlighting using stored text</li>
+        <li>Update search filters and suggestions</li>
+        <li>Conduct user interface testing</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Updated search interface</li>
+        <li>Modified PDF viewer component</li>
+        <li>Frontend integration tests</li>
+    </ul>
+    
+    <h3>7.5 Phase 5: Data Migration (Week 6-7)</h3>
+    <p><strong>Objective:</strong> Migrate existing documents to new system</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Develop migration script for existing documents</li>
+        <li>Execute full reindexing of document corpus</li>
+        <li>Validate data integrity and completeness</li>
+        <li>Compare search results between systems</li>
+        <li>Address any discrepancies</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Migration scripts</li>
+        <li>Data validation report</li>
+        <li>Search comparison analysis</li>
+    </ul>
+    
+    <h3>7.6 Phase 6: Testing and Validation (Week 7-8)</h3>
+    <p><strong>Objective:</strong> Comprehensive testing of migrated system</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Functional testing of all search features</li>
+        <li>Security testing of RBAC implementation</li>
+        <li>Performance testing and optimization</li>
+        <li>User acceptance testing</li>
+        <li>Documentation completion</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Test reports</li>
+        <li>Performance benchmarks</li>
+        <li>User acceptance sign-off</li>
+        <li>Complete documentation</li>
+    </ul>
+    
+    <h3>7.7 Phase 7: Deployment and Cutover (Week 8-9)</h3>
+    <p><strong>Objective:</strong> Deploy to production and complete migration</p>
+    
+    <p><strong>Tasks:</strong></p>
+    <ol>
+        <li>Deploy new infrastructure to production environment</li>
+        <li>Execute production data migration</li>
+        <li>Conduct parallel operation period</li>
+        <li>Complete cutover to new system</li>
+        <li>Decommission legacy components</li>
+    </ol>
+    
+    <p><strong>Deliverables:</strong></p>
+    <ul>
+        <li>Production deployment</li>
+        <li>Cutover documentation</li>
+        <li>Decommissioning plan</li>
+        <li>Post-migration support plan</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 8 -->
+<div class="section">
+    <h2>8. Risk Assessment and Mitigation</h2>
+    
+    <h3>8.1 Technical Risks</h3>
+    
+    <h4>Risk 1: Search Quality Regression</h4>
+    <ul>
+        <li><strong>Description:</strong> New system may produce lower quality search results for certain queries</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-high">High</span></li>
+        <li><strong>Mitigation:</strong> Implement parallel search comparison during testing phase; tune hybrid search weights based on user feedback</li>
+    </ul>
+    
+    <h4>Risk 2: OCR Quality Differences</h4>
+    <ul>
+        <li><strong>Description:</strong> Custom OCR implementation may differ from FSCrawler results</li>
+        <li><strong>Probability:</strong> <span class="risk-low">Low</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Use identical Tesseract configuration; validate OCR output against existing indexed content</li>
+    </ul>
+    
+    <h4>Risk 3: Performance Degradation</h4>
+    <ul>
+        <li><strong>Description:</strong> Vector search may introduce latency for large document collections</li>
+        <li><strong>Probability:</strong> <span class="risk-low">Low</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Implement appropriate indexing; optimize embedding model selection; benchmark performance early</li>
+    </ul>
+    
+    <h4>Risk 4: Embedding Model Limitations</h4>
+    <ul>
+        <li><strong>Description:</strong> Selected embedding model may not capture domain-specific terminology</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Evaluate multiple models during development; consider fine-tuning for domain vocabulary</li>
+    </ul>
+    
+    <h3>8.2 Operational Risks</h3>
+    
+    <h4>Risk 5: Team Learning Curve</h4>
+    <ul>
+        <li><strong>Description:</strong> Team unfamiliarity with Milvus may slow development and operations</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Allocate training time; engage with Milvus community; document operational procedures</li>
+    </ul>
+    
+    <h4>Risk 6: Dependency on New Technology</h4>
+    <ul>
+        <li><strong>Description:</strong> Milvus is less mature than Elasticsearch with smaller community</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-low">Low</span></li>
+        <li><strong>Mitigation:</strong> Maintain rollback capability; monitor Milvus project health; document troubleshooting procedures</li>
+    </ul>
+    
+    <h3>8.3 Project Risks</h3>
+    
+    <h4>Risk 7: Timeline Overrun</h4>
+    <ul>
+        <li><strong>Description:</strong> Implementation may take longer than estimated</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Build buffer into timeline; prioritize core features; plan for phased delivery</li>
+    </ul>
+    
+    <h4>Risk 8: Scope Creep</h4>
+    <ul>
+        <li><strong>Description:</strong> Additional features may be requested during implementation</li>
+        <li><strong>Probability:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Impact:</strong> <span class="risk-medium">Medium</span></li>
+        <li><strong>Mitigation:</strong> Clearly define scope boundaries; defer enhancements to future phases</li>
+    </ul>
+    
+    <h3>8.4 Risk Summary Matrix</h3>
+    <table>
+        <tr>
+            <th>Risk</th>
+            <th>Probability</th>
+            <th>Impact</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>Search Quality Regression</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-high">High</td>
+            <td class="risk-high">High</td>
+        </tr>
+        <tr>
+            <td>OCR Quality Differences</td>
+            <td class="risk-low">Low</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-low">Low</td>
+        </tr>
+        <tr>
+            <td>Performance Degradation</td>
+            <td class="risk-low">Low</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>Embedding Model Limitations</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>Team Learning Curve</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>Dependency on New Technology</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-low">Low</td>
+            <td class="risk-low">Low</td>
+        </tr>
+        <tr>
+            <td>Timeline Overrun</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>Scope Creep</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+            <td class="risk-medium">Medium</td>
+        </tr>
+    </table>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 9 -->
+<div class="section">
+    <h2>9. Resource Requirements</h2>
+    
+    <h3>9.1 Infrastructure Resources</h3>
+    
+    <h4>Development Environment</h4>
+    <ul>
+        <li>Docker host with minimum 8GB RAM</li>
+        <li>50GB storage for documents and indexes</li>
+        <li>Network connectivity for container communication</li>
+    </ul>
+    
+    <h4>Production Environment</h4>
+    <ul>
+        <li>Docker host with minimum 8GB RAM (reduced from current 10GB+)</li>
+        <li>100GB+ storage based on document volume</li>
+        <li>Backup storage for database and vector index</li>
+    </ul>
+    
+    <h3>9.2 Software Dependencies</h3>
+    
+    <h4>New Components</h4>
+    <ul>
+        <li>Milvus 2.4 or later</li>
+        <li>Etcd 3.5 or later</li>
+        <li>Python 3.10 or later</li>
+        <li>PyMuPDF library</li>
+        <li>pytesseract library</li>
+        <li>sentence-transformers library</li>
+        <li>watchdog library</li>
+        <li>pymilvus client library</li>
+    </ul>
+    
+    <h4>Unchanged Components</h4>
+    <ul>
+        <li>PostgreSQL 16</li>
+        <li>Next.js 14</li>
+        <li>Node.js 22</li>
+    </ul>
+    
+    <h3>9.3 Human Resources</h3>
+    
+    <h4>Development Team</h4>
+    <ul>
+        <li>Backend Developer: 6-8 weeks effort</li>
+        <li>Frontend Developer: 2 weeks effort</li>
+        <li>DevOps Engineer: 2 weeks effort</li>
+    </ul>
+    
+    <h4>Support During Implementation</h4>
+    <ul>
+        <li>Project Manager: Part-time oversight</li>
+        <li>QA Tester: 2 weeks effort</li>
+        <li>End Users: UAT participation</li>
+    </ul>
+    
+    <h3>9.4 Cost Considerations</h3>
+    
+    <h4>Direct Costs</h4>
+    <ul>
+        <li>No licensing costs (all components open source)</li>
+        <li>No API costs (local embedding model)</li>
+        <li>Infrastructure costs neutral or reduced</li>
+    </ul>
+    
+    <h4>Indirect Costs</h4>
+    <ul>
+        <li>Development team time</li>
+        <li>Training and learning curve</li>
+        <li>Temporary productivity impact during transition</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 10 -->
+<div class="section">
+    <h2>10. Timeline and Milestones</h2>
+    
+    <h3>10.1 Project Timeline</h3>
+    <table>
+        <tr>
+            <th>Phase</th>
+            <th>Duration</th>
+            <th>Start</th>
+            <th>End</th>
+        </tr>
+        <tr>
+            <td>Phase 1: Infrastructure Setup</td>
+            <td>2 weeks</td>
+            <td>Week 1</td>
+            <td>Week 2</td>
+        </tr>
+        <tr>
+            <td>Phase 2: Document Processing</td>
+            <td>2 weeks</td>
+            <td>Week 2</td>
+            <td>Week 4</td>
+        </tr>
+        <tr>
+            <td>Phase 3: Search API Development</td>
+            <td>2 weeks</td>
+            <td>Week 4</td>
+            <td>Week 5</td>
+        </tr>
+        <tr>
+            <td>Phase 4: Frontend Integration</td>
+            <td>1 week</td>
+            <td>Week 5</td>
+            <td>Week 6</td>
+        </tr>
+        <tr>
+            <td>Phase 5: Data Migration</td>
+            <td>1 week</td>
+            <td>Week 6</td>
+            <td>Week 7</td>
+        </tr>
+        <tr>
+            <td>Phase 6: Testing and Validation</td>
+            <td>1.5 weeks</td>
+            <td>Week 7</td>
+            <td>Week 8</td>
+        </tr>
+        <tr>
+            <td>Phase 7: Deployment and Cutover</td>
+            <td>1.5 weeks</td>
+            <td>Week 8</td>
+            <td>Week 9</td>
+        </tr>
+    </table>
+    
+    <p><strong>Total Duration: 9 weeks</strong></p>
+    
+    <h3>10.2 Key Milestones</h3>
+    <table>
+        <tr>
+            <th>Milestone</th>
+            <th>Target Date</th>
+            <th>Success Criteria</th>
+        </tr>
+        <tr>
+            <td>Infrastructure Ready</td>
+            <td>End of Week 2</td>
+            <td>Milvus operational in development</td>
+        </tr>
+        <tr>
+            <td>Processing Service Complete</td>
+            <td>End of Week 4</td>
+            <td>Documents indexing successfully</td>
+        </tr>
+        <tr>
+            <td>Search API Complete</td>
+            <td>End of Week 5</td>
+            <td>Hybrid search functional</td>
+        </tr>
+        <tr>
+            <td>Frontend Integration Complete</td>
+            <td>End of Week 6</td>
+            <td>Full user workflow operational</td>
+        </tr>
+        <tr>
+            <td>Data Migration Complete</td>
+            <td>End of Week 7</td>
+            <td>All documents migrated</td>
+        </tr>
+        <tr>
+            <td>UAT Complete</td>
+            <td>End of Week 8</td>
+            <td>User acceptance obtained</td>
+        </tr>
+        <tr>
+            <td>Production Deployment</td>
+            <td>End of Week 9</td>
+            <td>System live in production</td>
+        </tr>
+    </table>
+    
+    <h3>10.3 Dependencies and Critical Path</h3>
+    <p>The critical path runs through:</p>
+    <ol>
+        <li>Infrastructure Setup (prerequisite for all development)</li>
+        <li>Document Processing Service (required for testing search)</li>
+        <li>Search API Development (required for frontend integration)</li>
+        <li>Data Migration (required for validation)</li>
+        <li>Production Deployment</li>
+    </ol>
+    <p>Parallel work is possible between frontend development and backend API development after infrastructure is ready.</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Section 11 -->
+<div class="section">
+    <h2>11. Recommendations</h2>
+    
+    <h3>11.1 Primary Recommendation</h3>
+    <p>Based on the analysis presented in this document, the technical team recommends proceeding with the migration to Milvus with the following considerations:</p>
+    
+    <div class="highlight-box">
+        <h4>Proceed with Migration</h4>
+        <ul>
+            <li>The proposed architecture offers tangible benefits in search quality and system simplification</li>
+            <li>All current features can be replicated in the new system</li>
+            <li>The security model remains equivalent</li>
+            <li>Resource requirements are reduced</li>
+        </ul>
+    </div>
+    
+    <h4>Phased Approach</h4>
+    <ul>
+        <li>Implement in development environment first</li>
+        <li>Validate all features before production deployment</li>
+        <li>Maintain rollback capability throughout</li>
+    </ul>
+    
+    <h3>11.2 Alternative Options</h3>
+    
+    <h4>Option A: Full Migration (Recommended)</h4>
+    <ul>
+        <li>Replace Elasticsearch and FSCrawler with Milvus</li>
+        <li>Implement all features as described</li>
+        <li>Timeline: 9 weeks</li>
+    </ul>
+    
+    <h4>Option B: Hybrid Architecture</h4>
+    <ul>
+        <li>Keep Elasticsearch for keyword search</li>
+        <li>Add Milvus for semantic search only</li>
+        <li>Increased complexity but lower risk</li>
+        <li>Timeline: 6 weeks</li>
+    </ul>
+    
+    <h4>Option C: Elasticsearch Vector Enhancement</h4>
+    <ul>
+        <li>Use Elasticsearch 8.x native vector search</li>
+        <li>Minimal architecture changes</li>
+        <li>Limited semantic capabilities</li>
+        <li>Timeline: 4 weeks</li>
+    </ul>
+    
+    <h3>11.3 Success Factors</h3>
+    <p>For successful implementation, the following factors are critical:</p>
+    <ol>
+        <li>Adequate development time allocation without competing priorities</li>
+        <li>Early stakeholder engagement for requirement validation</li>
+        <li>Comprehensive testing including search quality comparison</li>
+        <li>User training on any interface changes</li>
+        <li>Clear rollback procedures in case of issues</li>
+    </ol>
+    
+    <h3>11.4 Next Steps</h3>
+    <p>Upon approval of this proposal:</p>
+    <ol>
+        <li>Allocate development resources as outlined</li>
+        <li>Set up development environment for Milvus</li>
+        <li>Begin Phase 1 infrastructure setup</li>
+        <li>Schedule regular progress reviews</li>
+        <li>Plan user communication regarding upcoming changes</li>
+    </ol>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Approval Section -->
+<div class="section">
+    <h2>Document Approval</h2>
+    
+    <table class="approval-table">
+        <tr>
+            <th>Role</th>
+            <th>Name</th>
+            <th>Signature</th>
+            <th>Date</th>
+        </tr>
+        <tr>
+            <td>Technical Lead</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Project Manager</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>IT Director</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    
+    <hr>
+    
+    <p style="text-align: center; color: #666; margin-top: 40px;"><strong>End of Document</strong></p>
+</div>
+
+</body>
+</html>
