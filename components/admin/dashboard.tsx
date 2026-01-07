@@ -6,12 +6,13 @@ import { FileManager } from "@/components/admin/file-manager";
 import { SearchStats } from "@/components/admin/search-stats";
 import { ElasticsearchManager } from "@/components/admin/elasticsearch-manager";
 import { SearchLibrary } from "@/components/admin/search-library";
+import { SystemOverview } from "@/components/admin/system-overview";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("files");
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -26,13 +27,18 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      <Tabs defaultValue="files" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
           <TabsTrigger value="files">Gestionnaire de fichiers</TabsTrigger>
           <TabsTrigger value="search">Statistiques de recherche</TabsTrigger>
           <TabsTrigger value="library">Bibliothèque de recherche</TabsTrigger>
           <TabsTrigger value="elasticsearch">Elasticsearch</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-6">
+          <SystemOverview />
+        </TabsContent>
 
         <TabsContent value="files" className="mt-6">
           <FileManager />

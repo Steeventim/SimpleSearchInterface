@@ -48,58 +48,15 @@ export function SearchStats() {
       if (data.stats && Array.isArray(data.stats)) {
         setStats(data.stats);
       } else {
-        // Fallback sur des données simulées si l'API ne renvoie pas le format attendu
         console.warn(
-          "Format de données inattendu, utilisation de données simulées"
+          "Format de données inattendu, aucune statistique disponible"
         );
-        setStats([
-          {
-            term: "intelligence artificielle",
-            count: 42,
-            lastSearched: new Date().toISOString(),
-          },
-          {
-            term: "elasticsearch",
-            count: 28,
-            lastSearched: new Date().toISOString(),
-          },
-          {
-            term: "next.js",
-            count: 23,
-            lastSearched: new Date().toISOString(),
-          },
-          { term: "react", count: 19, lastSearched: new Date().toISOString() },
-          {
-            term: "tailwind css",
-            count: 15,
-            lastSearched: new Date().toISOString(),
-          },
-        ]);
+        setStats([]);
       }
     } catch (err) {
       console.error("Erreur lors du chargement des statistiques:", err);
       setError("Impossible de charger les statistiques de recherche");
-
-      // Fallback sur des données simulées en cas d'erreur
-      setStats([
-        {
-          term: "intelligence artificielle",
-          count: 42,
-          lastSearched: new Date().toISOString(),
-        },
-        {
-          term: "elasticsearch",
-          count: 28,
-          lastSearched: new Date().toISOString(),
-        },
-        { term: "next.js", count: 23, lastSearched: new Date().toISOString() },
-        { term: "react", count: 19, lastSearched: new Date().toISOString() },
-        {
-          term: "tailwind css",
-          count: 15,
-          lastSearched: new Date().toISOString(),
-        },
-      ]);
+      setStats([]);
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,19 @@ import {
   transformElasticsearchResults,
 } from "@/lib/elasticsearch";
 
+// Helper function to track search
+async function trackSearch(searchTerm: string, baseUrl: string) {
+  try {
+    await fetch(`${baseUrl}/api/search-stats`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ searchTerm }),
+    });
+  } catch (error) {
+    console.error("Failed to track search:", error);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -20,6 +33,11 @@ export async function GET(request: Request) {
     if (!query) {
       return NextResponse.json({ results: [], total: 0 });
     }
+
+    // Track this search in stats (non-blocking)
+    const url = new URL(request.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+    trackSearch(query, baseUrl);
 
     // Obtenir la session pour le RBAC
     const session = await getServerSession(authOptions);
