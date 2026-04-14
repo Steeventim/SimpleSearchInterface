@@ -120,12 +120,10 @@ async function getAnalyticsData(
 
     const totalDocsResponse = await client.count({
       index: "documents",
-      body: {
-        query: totalDocumentsQuery,
-      },
+      query: totalDocumentsQuery,
     });
 
-    const totalDocuments = totalDocsResponse.body.count || 0;
+    const totalDocuments = totalDocsResponse.count || 0;
 
     // 2. Récupérer les statistiques de recherche (depuis les logs ou une table dédiée)
     // Pour l'instant, nous allons simuler avec des données réalistes basées sur les documents
@@ -139,22 +137,20 @@ async function getAnalyticsData(
     // 3. Récupérer les types de documents
     const documentTypesResponse = await client.search({
       index: "documents",
-      body: {
-        size: 0,
-        query: totalDocumentsQuery,
-        aggs: {
-          document_types: {
-            terms: {
-              field: "file.extension.keyword",
-              size: 10,
-            },
+      size: 0,
+      query: totalDocumentsQuery,
+      aggs: {
+        document_types: {
+          terms: {
+            field: "file.extension.keyword",
+            size: 10,
           },
         },
       },
     });
 
     const documentTypes =
-      documentTypesResponse.body.aggregations?.document_types?.buckets?.map(
+      (documentTypesResponse.aggregations as any)?.document_types?.buckets?.map(
         (bucket: any) => ({
           type: bucket.key,
           count: bucket.doc_count,
@@ -164,21 +160,19 @@ async function getAnalyticsData(
     // 4. Calculer les utilisateurs actifs
     const activeUsersResponse = await client.search({
       index: "documents",
-      body: {
-        size: 0,
-        query: userLevel >= 4 ? { match_all: {} } : totalDocumentsQuery,
-        aggs: {
-          unique_users: {
-            cardinality: {
-              field: "user_id",
-            },
+      size: 0,
+      query: userLevel >= 4 ? { match_all: {} } : totalDocumentsQuery,
+      aggs: {
+        unique_users: {
+          cardinality: {
+            field: "user_id",
           },
         },
       },
     });
 
     const activeUsers =
-      activeUsersResponse.body.aggregations?.unique_users?.value || 1;
+      (activeUsersResponse.aggregations as any)?.unique_users?.value || 1;
 
     // 5. Construire les données analytics
     const analyticsData: AnalyticsData = {
