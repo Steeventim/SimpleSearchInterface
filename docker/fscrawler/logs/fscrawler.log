@@ -1,4 +1,4 @@
-19:12:05,165 [32mINFO [m [f.console] ,----------------------------------------------------------------------------------------------------.
+10:48:44,402 [32mINFO [m [f.console] ,----------------------------------------------------------------------------------------------------.
 |       ,---,.  .--.--.     ,----..                                     ,--,           2.10-SNAPSHOT |
 |     ,'  .' | /  /    '.  /   /   \                                  ,--.'|                         |
 |   ,---.'   ||  :  /`. / |   :     :  __  ,-.                   .---.|  | :               __  ,-.   |
@@ -19,49 +19,16 @@
 |                          Documentation: https://fscrawler.readthedocs.io/                          |
 `----------------------------------------------------------------------------------------------------'
 
-19:12:05,308 [32mINFO [m [f.p.e.c.f.c.BootstrapChecks] Memory [Free/Total=Percent]: HEAP [106.3mb/2gb=5.19%], RAM [2gb/7.7gb=26.94%], Swap [3.8gb/4gb=95.73%].
-19:12:06,587 [33mWARN [m [f.p.e.c.f.c.FsCrawlerCli] username/password is deprecated. Use apiKey instead.
-19:12:06,685 [33mWARN [m [o.p.AbstractPluginManager] No 'plugins' root
-19:12:06,752 [33mWARN [m [f.p.e.c.f.FsCrawlerImpl] username/password is deprecated. Use apiKey instead.
-19:12:08,732 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] We are not doing SSL verification. It's not recommended for production.
-19:12:08,766 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] Semantic search is enabled but we are running Elasticsearch with a basic license although we need either an enterprise or trial license.We will not be able to use the semantic search features ATM. We might switch later to a vector embeddings generation.
-19:12:09,093 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] We are not doing SSL verification. It's not recommended for production.
-19:12:09,108 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] Semantic search is enabled but we are running Elasticsearch with a basic license although we need either an enterprise or trial license.We will not be able to use the semantic search features ATM. We might switch later to a vector embeddings generation.
-19:12:09,413 [32mINFO [m [f.p.e.c.f.FsCrawlerImpl] FSCrawler is now connected to Elasticsearch version [8.17.0]
-19:12:09,419 [32mINFO [m [f.p.e.c.f.FsParserAbstract] FS crawler started for [cenadi_job] for [/Users/laure/Desktop/Doc1] every [5m]
-19:12:09,422 [32mINFO [m [f.p.e.c.f.FsParserAbstract] Run #1: job [cenadi_job]: starting...
-19:12:11,779 [32mINFO [m [f.p.e.c.f.r.RestServer] FSCrawler Rest service started on [http://127.0.0.1:8080/fscrawler]
-19:12:28,905 [32mINFO [m [f.p.e.c.f.t.TikaInstance] OCR is enabled. This might slowdown the process.
-19:13:14,216 [33mWARN [m [f.p.e.c.f.f.b.FsCrawlerSimpleBulkProcessorListener] Error executing bulk
-java.lang.RuntimeException: com.fasterxml.jackson.core.exc.StreamConstraintsException: String value length (20054016) exceeds the maximum allowed (20000000, from `StreamReadConstraints.getMaxStringLength()`)
-	at fr.pilato.elasticsearch.crawler.fs.framework.JsonUtil.deserialize(JsonUtil.java:111)
-	at fr.pilato.elasticsearch.crawler.fs.client.ElasticsearchEngine.lambda$bulk$0(ElasticsearchEngine.java:65)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-	at fr.pilato.elasticsearch.crawler.fs.client.ElasticsearchEngine.bulk(ElasticsearchEngine.java:43)
-	at fr.pilato.elasticsearch.crawler.fs.client.ElasticsearchEngine.bulk(ElasticsearchEngine.java:29)
-	at fr.pilato.elasticsearch.crawler.fs.framework.bulk.FsCrawlerBulkProcessor.execute(FsCrawlerBulkProcessor.java:150)
-	at fr.pilato.elasticsearch.crawler.fs.framework.bulk.FsCrawlerBulkProcessor.executeIfNeeded(FsCrawlerBulkProcessor.java:130)
-	at fr.pilato.elasticsearch.crawler.fs.framework.bulk.FsCrawlerBulkProcessor.add(FsCrawlerBulkProcessor.java:117)
-	at fr.pilato.elasticsearch.crawler.fs.client.ElasticsearchClient.indexRawJson(ElasticsearchClient.java:474)
-	at fr.pilato.elasticsearch.crawler.fs.service.FsCrawlerDocumentServiceElasticsearchImpl.indexRawJson(FsCrawlerDocumentServiceElasticsearchImpl.java:76)
-	at fr.pilato.elasticsearch.crawler.fs.service.FsCrawlerDocumentServiceElasticsearchImpl.index(FsCrawlerDocumentServiceElasticsearchImpl.java:70)
-	at fr.pilato.elasticsearch.crawler.fs.FsParserAbstract.indexFile(FsParserAbstract.java:526)
-	at fr.pilato.elasticsearch.crawler.fs.FsParserAbstract.addFilesRecursively(FsParserAbstract.java:341)
-	at fr.pilato.elasticsearch.crawler.fs.FsParserAbstract.run(FsParserAbstract.java:171)
-	at java.base/java.lang.Thread.run(Thread.java:1474)
-Caused by: com.fasterxml.jackson.core.exc.StreamConstraintsException: String value length (20054016) exceeds the maximum allowed (20000000, from `StreamReadConstraints.getMaxStringLength()`)
-	at com.fasterxml.jackson.core.StreamReadConstraints._constructException(StreamReadConstraints.java:658)
-	at com.fasterxml.jackson.core.StreamReadConstraints.validateStringLength(StreamReadConstraints.java:593)
-	at com.fasterxml.jackson.core.util.ReadConstrainedTextBuffer.validateStringLength(ReadConstrainedTextBuffer.java:27)
-	at com.fasterxml.jackson.core.util.TextBuffer.finishCurrentSegment(TextBuffer.java:1017)
-	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._finishString2(ReaderBasedJsonParser.java:2207)
-	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._finishString(ReaderBasedJsonParser.java:2173)
-	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.getText(ReaderBasedJsonParser.java:295)
-	at com.fasterxml.jackson.databind.deser.std.UntypedObjectDeserializerNR._deserializeNR(UntypedObjectDeserializerNR.java:242)
-	at com.fasterxml.jackson.databind.deser.std.UntypedObjectDeserializerNR.deserialize(UntypedObjectDeserializerNR.java:69)
-	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:342)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:5038)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3954)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3922)
-	at fr.pilato.elasticsearch.crawler.fs.framework.JsonUtil.deserialize(JsonUtil.java:109)
-	... 14 more
+10:48:45,109 [32mINFO [m [f.p.e.c.f.c.BootstrapChecks] Memory [Free/Total=Percent]: HEAP [108.7mb/2gb=5.31%], RAM [126.6mb/7.7gb=1.59%], Swap [3.9gb/4gb=99.46%].
+10:48:47,475 [33mWARN [m [f.p.e.c.f.c.FsCrawlerCli] username/password is deprecated. Use apiKey instead.
+10:48:47,573 [33mWARN [m [o.p.AbstractPluginManager] No 'plugins' root
+10:48:47,633 [33mWARN [m [f.p.e.c.f.FsCrawlerImpl] username/password is deprecated. Use apiKey instead.
+10:48:49,519 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] We are not doing SSL verification. It's not recommended for production.
+10:48:49,551 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] Semantic search is enabled but we are running Elasticsearch with a basic license although we need either an enterprise or trial license.We will not be able to use the semantic search features ATM. We might switch later to a vector embeddings generation.
+10:48:49,669 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] We are not doing SSL verification. It's not recommended for production.
+10:48:49,685 [33mWARN [m [f.p.e.c.f.c.ElasticsearchClient] Semantic search is enabled but we are running Elasticsearch with a basic license although we need either an enterprise or trial license.We will not be able to use the semantic search features ATM. We might switch later to a vector embeddings generation.
+10:48:50,151 [32mINFO [m [f.p.e.c.f.FsCrawlerImpl] FSCrawler is now connected to Elasticsearch version [8.17.0]
+10:48:50,158 [32mINFO [m [f.p.e.c.f.FsParserAbstract] FS crawler started for [cenadi_job] for [/Users/laure/Desktop/Doc1] every [5m]
+10:48:50,165 [32mINFO [m [f.p.e.c.f.FsParserAbstract] Run #1: job [cenadi_job]: starting...
+10:48:52,848 [32mINFO [m [f.p.e.c.f.r.RestServer] FSCrawler Rest service started on [http://127.0.0.1:8080/fscrawler]
+10:49:04,803 [32mINFO [m [f.p.e.c.f.t.TikaInstance] OCR is enabled. This might slowdown the process.

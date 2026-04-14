@@ -33,7 +33,7 @@ model User {
   division      Division?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  lastLogin     DateTime?
+  // lastLogin removed to match current DB schema
   searchHistory SearchHistory[]
   activities    ActivityLog[]
 }

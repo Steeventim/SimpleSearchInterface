@@ -60,7 +60,8 @@ export const authOptions = {
     },
     session: {
         strategy: "jwt" as const,
-        maxAge: 30 * 60, // 30 minutes
+        // Configurable via env var (seconds). Default: 30 minutes.
+        maxAge: Number(process.env.NEXTAUTH_MAX_AGE || 30 * 60),
     },
 };
 

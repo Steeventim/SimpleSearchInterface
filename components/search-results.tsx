@@ -20,6 +20,7 @@ import { FallbackDocumentViewer } from "@/components/fallback-document-viewer";
 import { SimplePdfPartitioner } from "@/components/simple-pdf-partitioner";
 import { PartitioningHelpDialog } from "@/components/partitioning-help-dialog";
 import { PdfComponentWrapper } from "@/components/pdf-component-wrapper";
+import { TextDocumentViewer } from "@/components/text-document-viewer";
 
 interface SearchResultsProps {
   results: SearchResult[];
@@ -42,8 +43,14 @@ export function SearchResults({
   } | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isSmartPartitionerOpen, setIsSmartPartitionerOpen] = useState(false);
+  const [isTextViewerOpen, setIsTextViewerOpen] = useState(false);
   const [smartPartitionerDoc, setSmartPartitionerDoc] = useState<{
     url: string;
+    title?: string;
+    searchTerm?: string;
+  } | null>(null);
+  const [textViewerDoc, setTextViewerDoc] = useState<{
+    path: string;
     title: string;
     searchTerm: string;
   } | null>(null);
@@ -89,6 +96,19 @@ export function SearchResults({
   });
 
   const handleViewDocument = (result: SearchResult) => {
+    const documentPath = result.path?.real || result.filePath || "";
+
+    // Check if document supports text extraction and has search term
+    if (searchQuery && isTextExtractableDocument(result)) {
+      setTextViewerDoc({
+        path: documentPath,
+        title: result.title || result.fileName || "Document",
+        searchTerm: searchQuery,
+      });
+      setIsTextViewerOpen(true);
+      return;
+    }
+
     // Si c'est un PDF et qu'il y a un terme de recherche, utiliser le visualiseur PDF simplifié
     if (isPdfDocument(result) && searchQuery) {
       handleSmartPartitioning(result);
@@ -96,7 +116,6 @@ export function SearchResults({
     }
 
     // Sinon, utiliser le visualiseur de document classique
-    const documentPath = result.path?.real || result.filePath || "";
     if (documentPath) {
       setSelectedDocument({
         path: documentPath,
@@ -104,6 +123,11 @@ export function SearchResults({
       });
       setIsViewerOpen(true);
     }
+  };
+
+  const isPdfDocument = (result: SearchResult) => {
+    const fileName = result.fileName?.toLowerCase() || "";
+    return fileName.endsWith(".pdf") || result.type === "application/pdf";
   };
 
   const handleSmartPartitioning = (result: SearchResult) => {
@@ -118,11 +142,13 @@ export function SearchResults({
     }
   };
 
-  const isPdfDocument = (result: SearchResult) => {
+  const isTextExtractableDocument = (result: SearchResult) => {
+    const fileName = result.fileName?.toLowerCase() || "";
     return (
-      result.fileName?.toLowerCase().endsWith(".pdf") ||
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".txt") ||
       result.type === "application/pdf" ||
-      result.path?.virtual?.includes(".pdf")
+      result.type === "text/plain"
     );
   };
 
@@ -267,7 +293,11 @@ export function SearchResults({
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      {isPdfDocument(result) && searchQuery ? (
+                      {searchQuery && isTextExtractableDocument(result) ? (
+                        <span className="text-primary font-medium">
+                          Texte extractible • Recherche mise en évidence
+                        </span>
+                      ) : isPdfDocument(result) && searchQuery ? (
                         <span className="text-primary font-medium">
                           PDF • Visualisation avec recherche
                         </span>
@@ -284,6 +314,16 @@ export function SearchResults({
           </Card>
         ))}
       </div>
+
+      {textViewerDoc && (
+        <TextDocumentViewer
+          documentPath={textViewerDoc.path}
+          documentTitle={textViewerDoc.title}
+          searchTerm={textViewerDoc.searchTerm}
+          isOpen={isTextViewerOpen}
+          onClose={() => setIsTextViewerOpen(false)}
+        />
+      )}
 
       {selectedDocument && (
         <FallbackDocumentViewer

@@ -15,6 +15,8 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  Eye,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,6 +47,8 @@ export function DocumentViewer({
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"full" | "reduced">("full");
+  const [allPages, setAllPages] = useState<PageInfo[]>([]);
 
   useEffect(() => {
     if (!isOpen || !documentPath) return;
@@ -74,12 +78,17 @@ export function DocumentViewer({
         console.log("Pages récupérées:", data);
 
         if (data.pages && Array.isArray(data.pages)) {
-          setPages(data.pages);
+          setAllPages(data.pages);
           setTotalPages(data.totalPages || 0);
 
-          // Définir la page actuelle sur la première page
-          if (data.pages.length > 0) {
-            setCurrentPage(0);
+          // Filter pages based on view mode
+          const filteredPages = getFilteredPages(data.pages, viewMode, data.totalPages || 0);
+          setPages(filteredPages);
+
+          // Set current page to first page with search term if in reduced mode, otherwise first page
+          if (filteredPages.length > 0) {
+            const firstPageWithTerm = filteredPages.findIndex(p => p.hasSearchTerm);
+            setCurrentPage(firstPageWithTerm >= 0 ? firstPageWithTerm : 0);
           }
         } else {
           throw new Error(
@@ -98,7 +107,56 @@ export function DocumentViewer({
     };
 
     fetchDocumentPages();
-  }, [isOpen, documentPath, searchTerm]);
+  }, [isOpen, documentPath, searchTerm, viewMode]);
+
+  // Update filtered pages when view mode changes
+  useEffect(() => {
+    if (allPages.length > 0) {
+      const filteredPages = getFilteredPages(allPages, viewMode, totalPages);
+      setPages(filteredPages);
+
+      // Reset to first page or first page with search term
+      if (filteredPages.length > 0) {
+        const firstPageWithTerm = filteredPages.findIndex(p => p.hasSearchTerm);
+        setCurrentPage(firstPageWithTerm >= 0 ? firstPageWithTerm : 0);
+      }
+    }
+  }, [viewMode, allPages, totalPages]);
+
+  const getFilteredPages = (allPages: PageInfo[], mode: "full" | "reduced", totalPages: number): PageInfo[] => {
+    if (mode === "full") {
+      return allPages;
+    }
+
+    // Reduced mode: show first page, last page, and pages with search terms
+    const filteredPages: PageInfo[] = [];
+    const pagesWithTerms: PageInfo[] = [];
+
+    allPages.forEach(page => {
+      if (page.hasSearchTerm) {
+        pagesWithTerms.push(page);
+      }
+    });
+
+    // Add first page if it exists
+    if (allPages.length > 0) {
+      filteredPages.push(allPages[0]);
+    }
+
+    // Add pages with search terms (excluding first page if it already has terms)
+    pagesWithTerms.forEach(page => {
+      if (page.pageNumber !== 1) {
+        filteredPages.push(page);
+      }
+    });
+
+    // Add last page if it exists and is different from first page
+    if (allPages.length > 1 && allPages[allPages.length - 1].pageNumber !== 1) {
+      filteredPages.push(allPages[allPages.length - 1]);
+    }
+
+    return filteredPages;
+  };
 
   const handleNextPage = () => {
     if (currentPage < pages.length - 1) {
@@ -187,10 +245,30 @@ export function DocumentViewer({
                     </>
                   )}
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={viewMode === "full" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode("full")}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Complet
+                    </Button>
+                    <Button
+                      variant={viewMode === "reduced" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode("reduced")}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Réduit
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {pages.length > 0 && (
